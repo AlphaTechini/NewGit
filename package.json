@@ -1,0 +1,14 @@
+{
+  "name": "newgit-tools",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "screenshots": "node scripts/screenshots.mjs",
+    "smoke": "./scripts/smoke.sh"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}
