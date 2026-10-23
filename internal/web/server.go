@@ -182,9 +182,21 @@ func (s *Server) fillPage(r *http.Request, p *Page) {
 
 const themeCookie = "ng_theme"
 
-// safeNext accepts only same-site relative paths.
+// safeNext accepts only same-site relative paths. Browsers strip TAB, CR and
+// LF from a Location header and treat a backslash as a slash, so any control
+// byte or backslash could turn "/\t/evil.com" into the protocol-relative
+// "//evil.com"; those are rejected outright.
 func safeNext(next string) string {
-	if !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") || strings.ContainsAny(next, "\\\r\n\x00") {
+	if next == "" || next[0] != '/' || (len(next) > 1 && next[1] == '/') {
+		return "/"
+	}
+	for i := 0; i < len(next); i++ {
+		if c := next[i]; c < 0x20 || c == 0x7f || c == '\\' {
+			return "/"
+		}
+	}
+	u, err := url.Parse(next)
+	if err != nil || u.Scheme != "" || u.Host != "" || u.User != nil {
 		return "/"
 	}
 	return next

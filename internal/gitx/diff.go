@@ -1,6 +1,7 @@
 package gitx
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
@@ -269,6 +270,29 @@ func DiffCommits(ctx context.Context, gitDir, from, to string) ([]FileDiff, erro
 		return nil, err
 	}
 	return ParseDiff(string(out)), nil
+}
+
+// DiffCommitsLimited is DiffCommits with the raw diff capped at limit bytes.
+// When the diff is longer, the output is cut back to the last complete file
+// (the byte before a "diff --git" line) before parsing, and truncated is true.
+func DiffCommitsLimited(ctx context.Context, gitDir, from, to string, limit int64) ([]FileDiff, bool, error) {
+	out, truncated, err := RunLimited(ctx, gitDir, limit, "diff", "--no-color", "--no-ext-diff", "-M", "--end-of-options", from, to)
+	if err != nil {
+		return nil, false, err
+	}
+	if truncated {
+		out = cutAtFileBoundary(out)
+	}
+	return ParseDiff(string(out)), truncated, nil
+}
+
+// cutAtFileBoundary drops the partial file at the end of out, keeping every
+// file whose "diff --git" line lies within it.
+func cutAtFileBoundary(out []byte) []byte {
+	if i := bytes.LastIndex(out, []byte("\ndiff --git ")); i >= 0 {
+		return out[:i+1]
+	}
+	return nil
 }
 
 // CommitDiff returns the diff a commit introduced (against its first parent).

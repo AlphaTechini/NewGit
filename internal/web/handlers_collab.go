@@ -90,7 +90,7 @@ func (s *Server) handleIssues(w http.ResponseWriter, r *http.Request, repo store
 					code = "closed"
 				}
 			}
-			http.Redirect(w, r, withFlash(fmt.Sprintf("/%s/-/issues/%d#latest", repo.Path(), n), code), http.StatusSeeOther)
+			http.Redirect(w, r, withFlash(fmt.Sprintf("/%s/-/issues/%d#ng:latest", repo.Path(), n), code), http.StatusSeeOther)
 		case "state":
 			u := s.checkPost(w, r)
 			if u == nil {
@@ -142,7 +142,7 @@ func (s *Server) handleMRs(w http.ResponseWriter, r *http.Request, repo store.Re
 				s.storeError(w, r, err)
 				return
 			}
-			http.Redirect(w, r, withFlash(fmt.Sprintf("/%s/-/merge_requests/%d#latest", repo.Path(), n), "commented"), http.StatusSeeOther)
+			http.Redirect(w, r, withFlash(fmt.Sprintf("/%s/-/merge_requests/%d#ng:latest", repo.Path(), n), "commented"), http.StatusSeeOther)
 		case "state":
 			u := s.checkPost(w, r)
 			if u == nil {
@@ -214,9 +214,15 @@ func appendUnique(list []string, v string) []string {
 	return append(list, v)
 }
 
-// compareBranches fills Commits, Diffs, CommitCount and Compared on the
-// new-MR page when ?source= (and optionally ?target=, default branch) name
-// existing branches.
+// Limits on the compare preview. The per-file line cap is in gitx.ParseDiff.
+const (
+	maxCompareFiles     = 300     // files shown; DiffsTruncated is set past this
+	maxCompareDiffBytes = 8 << 20 // raw git diff read for the preview
+)
+
+// compareBranches fills Commits, Diffs, DiffsTruncated, CommitCount and
+// Compared on the new-MR page when ?source= (and optionally ?target=, default
+// branch) name existing branches.
 func (s *Server) compareBranches(r *http.Request, repo store.Repo, rc *RepoCtx, data map[string]any) {
 	ctx := r.Context()
 	src, tgt := r.URL.Query().Get("source"), r.URL.Query().Get("target")
@@ -243,11 +249,15 @@ func (s *Server) compareBranches(r *http.Request, repo store.Repo, rc *RepoCtx, 
 	if commits == nil {
 		commits = []gitx.Commit{}
 	}
-	diffs, err := gitx.DiffCommits(ctx, repo.Dir, mb, srcOID)
+	diffs, truncated, err := gitx.DiffCommitsLimited(ctx, repo.Dir, mb, srcOID, maxCompareDiffBytes)
 	if err != nil {
 		return
 	}
+	if len(diffs) > maxCompareFiles {
+		diffs, truncated = diffs[:maxCompareFiles], true
+	}
 	data["Commits"], data["Diffs"], data["Compared"] = commits, diffs, true
+	data["DiffsTruncated"] = truncated
 	data["CommitCount"], _ = gitx.CountCommits(ctx, repo.Dir, srcOID, "^"+mb)
 }
 

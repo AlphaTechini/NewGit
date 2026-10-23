@@ -205,7 +205,8 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request, repo store.R
 	data := map[string]any{"Path": p, "Commit": commit, "Size": size, "Name": path.Base(p), "IsImage": false, "RawURL": ""}
 	isImage := false
 	if _, ext := imageTypes[strings.ToLower(path.Ext(p))]; ext && size <= maxRawImage {
-		if b, err := gitx.CatBlob(ctx, repo.Dir, commit+":"+p); err == nil {
+		// sniffImage looks at 512 bytes at most, so read no more than that.
+		if b, err := gitx.CatBlobHead(ctx, repo.Dir, commit+":"+p, 512); err == nil {
 			_, isImage = sniffImage(p, b)
 		}
 	}
