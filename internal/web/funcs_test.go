@@ -29,6 +29,18 @@ func TestChromaCSS(t *testing.T) {
 	}
 }
 
+// Comments keep a line break for every newline; repository Markdown files
+// let wrapped lines flow as one paragraph (CommonMark soft breaks).
+func TestHardWrapsOnlyForUserText(t *testing.T) {
+	const src = "line one\nline two"
+	if got := string(renderMarkdown(src)); !strings.Contains(got, "<br>") {
+		t.Errorf("comment path: want <br> for a soft break, got %q", got)
+	}
+	if got := string(renderMarkdownDoc(src)); strings.Contains(got, "<br") {
+		t.Errorf("doc path: want no <br> for a soft break, got %q", got)
+	}
+}
+
 func TestSafeNext(t *testing.T) {
 	cases := []struct{ in, want string }{
 		{"/a/b?x=1#y", "/a/b?x=1#y"},

@@ -89,7 +89,7 @@ func (s *Server) treeData(r *http.Request, repo store.Repo, commit, p string) (*
 		if b, err := gitx.CatBlob(ctx, repo.Dir, commit+":"+rp); err == nil && len(b) < maxBlobDisplay {
 			td.Readme = rp
 			if strings.HasSuffix(strings.ToLower(rp), ".md") || strings.HasSuffix(strings.ToLower(rp), ".markdown") {
-				td.ReadmeHTML = renderMarkdown(string(b))
+				td.ReadmeHTML = renderMarkdownDoc(string(b))
 			} else {
 				td.ReadmeHTML = string(b)
 			}
@@ -226,7 +226,7 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request, repo store.R
 		} else {
 			lower := strings.ToLower(p)
 			if strings.HasSuffix(lower, ".md") || strings.HasSuffix(lower, ".markdown") {
-				data["Markdown"] = renderMarkdown(string(b))
+				data["Markdown"] = renderMarkdownDoc(string(b))
 			}
 			data["Highlighted"] = highlight(p, string(b))
 			data["Lines"] = strings.Count(string(b), "\n")

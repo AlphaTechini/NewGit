@@ -16,21 +16,41 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	gmhtml "github.com/yuin/goldmark/renderer/html"
 
 	"github.com/AlphaTechini/newgit/internal/gitx"
 )
 
-var md = goldmark.New(
-	goldmark.WithExtensions(extension.GFM),
-	goldmark.WithParserOptions(parser.WithAutoHeadingID()),
-	goldmark.WithRendererOptions(gmhtml.WithHardWraps()),
-	// Raw HTML is not rendered (goldmark's default is safe).
+// newMarkdown returns a goldmark instance with the shared GFM and heading
+// settings. Raw HTML is not rendered (goldmark's default is safe). Callers
+// differ only in renderer options.
+func newMarkdown(rendererOpts ...renderer.Option) goldmark.Markdown {
+	return goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
+		goldmark.WithRendererOptions(rendererOpts...),
+	)
+}
+
+var (
+	// md renders user text (issue and MR descriptions, comments). Every
+	// newline is a line break, as on GitHub and GitLab comments.
+	md = newMarkdown(gmhtml.WithHardWraps())
+	// mdDoc renders repository Markdown files (READMEs, .md blobs). Newlines
+	// are CommonMark soft breaks, so wrapped source lines flow as one paragraph.
+	mdDoc = newMarkdown()
 )
 
-func renderMarkdown(src string) template.HTML {
+// renderMarkdown renders user text (comments, descriptions).
+func renderMarkdown(src string) template.HTML { return convertMarkdown(md, src) }
+
+// renderMarkdownDoc renders repository Markdown files.
+func renderMarkdownDoc(src string) template.HTML { return convertMarkdown(mdDoc, src) }
+
+func convertMarkdown(m goldmark.Markdown, src string) template.HTML {
 	var buf bytes.Buffer
-	if err := md.Convert([]byte(src), &buf); err != nil {
+	if err := m.Convert([]byte(src), &buf); err != nil {
 		return template.HTML(template.HTMLEscapeString(src))
 	}
 	return template.HTML(buf.String())
