@@ -744,7 +744,7 @@ async function seed({ base, work, port }) {
     target: "main",
     title: "Add search by station and time",
     description: "Adds `store.Filter` and a `/api/search` endpoint that filters readings by station and start time.\n\nThe ring buffer stays the source of truth. Search only reads a snapshot.",
-  })) || "").split("/").pop());
+  })) || "").split("?")[0].split("/").pop());
   if (!branchMR) throw new Error("branch merge request was not created");
 
   await post("alice", `/alice/aurora/-/merge_requests/${bobMR}/comment`, {

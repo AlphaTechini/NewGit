@@ -1,52 +1,53 @@
 {{define "layout"}}<!doctype html>
-<html lang="en">
+<html lang="en"{{with .Theme}} data-theme="{{.}}"{{end}}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="{{if eq .Theme "dark"}}dark{{else if eq .Theme "light"}}light{{else}}light dark{{end}}">
 <title>{{.Title}} · NewGit</title>
+<link rel="preload" href="/-/static/fonts/InterVariable-4.1.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/-/static/style.css">
 <link rel="stylesheet" href="/-/static/chroma.css">
+<link rel="icon" href="/-/static/favicon.svg" type="image/svg+xml">
 <script src="/-/static/device.js" defer></script>
 </head>
 <body data-signed-in="{{if .User}}1{{else}}0{{end}}">
+<a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
-  <a class="logo" href="/"><span class="mark"></span>NewGit</a>
-  <a class="navlink" href="/explore">Explore</a>
-  <span class="spacer"></span>
-  {{if .User}}
-    <a class="btn sm" href="/-/new">+ New project</a>
-    <a class="userchip navlink" href="/-/device" title="This device">{{template "avatar" (dict "Name" .User.Username "Size" "")}} @{{.User.Username}}</a>
-    <form method="post" action="/-/signout" data-signout><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="btn sm" type="submit">Sign out</button></form>
-  {{else}}
-    <span class="muted" id="ng-device-hint"></span>
-    <a class="btn sm confirm" href="/-/signin">Sign in</a>
-  {{end}}
+  <a class="brand" href="/">{{template "logo"}}<span>NewGit</span></a>
+  <nav class="topnav" aria-label="Main">
+    {{if .User}}<a href="/"{{if eq .Nav "home"}} aria-current="page"{{end}}>Projects</a>{{end}}
+    <a href="/explore"{{if eq .Nav "explore"}} aria-current="page"{{end}}>Explore</a>
+  </nav>
+  <div class="top-actions">
+    {{if not .User}}<span class="device-hint hide-sm" id="ng-device-hint"></span>{{end}}
+    {{template "thememenu" .}}
+    {{if .User}}
+    <a class="btn sm" href="/-/new" aria-label="New project">{{template "icon" "plus"}}<span class="label-sm-hide">New project</span></a>
+    {{template "usermenu" .}}
+    {{else}}
+    <a class="btn sm primary" href="/-/signin">Sign in</a>
+    {{end}}
+  </div>
 </header>
-<div class="shell">
-  <aside class="sidebar">
-  {{if .Repo}}
-    <a class="proj" href="/{{.Repo.Path}}">{{template "avatar" (dict "Name" .Repo.Name "Size" "md" "Square" true)}} {{.Repo.Name}}</a>
-    <a class="item {{if eq .Nav "overview"}}active{{end}}" href="/{{.Repo.Path}}"><span>Project overview</span></a>
-    <div class="section">Code</div>
-    <a class="item {{if eq .Nav "files"}}active{{end}}" href="/{{.Repo.Path}}/-/tree/{{.Repo.Ref}}"><span>Repository</span></a>
-    <a class="item {{if eq .Nav "commits"}}active{{end}}" href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}"><span>Commits</span></a>
-    <a class="item {{if eq .Nav "branches"}}active{{end}}" href="/{{.Repo.Path}}/-/branches"><span>Branches</span></a>
-    <a class="item {{if eq .Nav "mrs"}}active{{end}}" href="/{{.Repo.Path}}/-/merge_requests"><span>Merge requests</span><span class="badge-count">{{.Repo.OpenMRs}}</span></a>
-    <a class="item {{if eq .Nav "pushes"}}active{{end}}" href="/{{.Repo.Path}}/-/pushes"><span>Push log</span></a>
-    <div class="section">Plan</div>
-    <a class="item {{if eq .Nav "issues"}}active{{end}}" href="/{{.Repo.Path}}/-/issues"><span>Issues</span><span class="badge-count">{{.Repo.OpenIssues}}</span></a>
-  {{else}}
-    <div class="section">Your work</div>
-    <a class="item {{if eq .Nav "home"}}active{{end}}" href="/"><span>Projects</span></a>
-    <a class="item {{if eq .Nav "explore"}}active{{end}}" href="/explore"><span>Explore</span></a>
-    {{if .User}}<a class="item {{if eq .Nav "device"}}active{{end}}" href="/-/device"><span>This device &amp; tokens</span></a>{{end}}
-  {{end}}
-  </aside>
-  <main class="content">
-    {{if .Repo}}<nav class="crumbs"><a href="/{{.Repo.Owner}}">{{.Repo.Owner}}</a><span class="sep">/</span><a href="/{{.Repo.Path}}">{{.Repo.Name}}</a>{{block "crumbs" .}}{{end}}</nav>{{end}}
-    {{if .Flash}}<div class="alert success">{{.Flash}}</div>{{end}}
-    {{if .Error}}<div class="alert danger">{{.Error}}</div>{{end}}
-    {{template "content" .}}
+<div class="shell{{if not .Repo}} no-side{{end}}">
+  {{if .Repo}}{{template "sidebar" .}}{{end}}
+  <main class="panel" id="main" tabindex="-1">
+    {{if .Repo}}
+    <div class="panel-head">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol>
+        <li><a href="/{{.Repo.Owner}}">{{.Repo.Owner}}</a></li>
+        <li><a href="/{{.Repo.Path}}"{{if eq .Nav "overview"}} aria-current="page"{{end}}>{{.Repo.Name}}</a></li>
+        {{block "crumbs" .}}{{end}}
+      </ol></nav>
+      {{template "clonemenu" .}}
+    </div>
+    {{end}}
+    <div class="page {{block "pageclass" .}}{{end}}">
+      {{if .Flash}}<div class="alert success" role="status">{{template "icon" "check-circle"}}<div class="alert-body">{{.Flash}}</div></div>{{end}}
+      {{if .Error}}<div class="alert danger" role="alert">{{template "icon" "alert"}}<div class="alert-body">{{.Error}}</div></div>{{end}}
+      {{template "content" .}}
+    </div>
   </main>
 </div>
 </body>
