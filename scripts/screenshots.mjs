@@ -706,7 +706,9 @@ async function seed({ base, work, port }) {
     commit(aDir, "alice", step.msg, step.days);
   }
   git(["checkout", "-q", "main"], { cwd: aDir });
-  git(["push", "-q", authed("alice", "alice/aurora"), "main", "feature/search"], { cwd: aDir });
+  git(["tag", "-a", "v0.1.0", "-m", "First tagged release", "main~2"], { cwd: aDir, env: identityEnv("alice") });
+  git(["tag", "v0.2.0", "main"], { cwd: aDir });
+  git(["push", "-q", authed("alice", "alice/aurora"), "main", "feature/search", "--tags"], { cwd: aDir });
 
   // bob/lantern: a small second project.
   const lDir = path.join(work, "lantern");
@@ -736,6 +738,7 @@ async function seed({ base, work, port }) {
   if (!bobMR) throw new Error("AGit push did not open a merge request:\n" + agitOut);
 
   writeFiles(bDir, { "web/static/style.css": STYLE_DARK_V2 });
+  git(["add", "-A"], { cwd: bDir });
   git(["commit", "-q", "--amend", "-m", "Add dark theme that follows the system setting"], { cwd: bDir, env: identityEnv("bob") });
   const v2 = git(["push", authed("bob", "alice/aurora"), "HEAD:refs/for/main", "-o", "topic=dark-theme"], { cwd: bDir }).out;
   if (!v2.includes("version 2")) throw new Error("second AGit push did not record version 2:\n" + v2);
@@ -842,6 +845,7 @@ function shotList({ fixSha, bobMR }) {
     { name: "commits", path: `${repo}/-/commits/main`, as: "alice" },
     { name: "commit-detail", path: `${repo}/-/commit/${fixSha}`, as: "alice" },
     { name: "branches", path: `${repo}/-/branches`, as: "alice" },
+    { name: "tags", path: `${repo}/-/tags`, as: "alice" },
     { name: "push-log", path: `${repo}/-/pushes`, as: "alice" },
     { name: "issues", path: `${repo}/-/issues?state=all`, as: "alice" },
     { name: "issue-detail", path: `${repo}/-/issues/1`, as: "alice" },
@@ -853,6 +857,7 @@ function shotList({ fixSha, bobMR }) {
     { name: "mr-commits", path: `${mr}?tab=commits`, as: "alice" },
     { name: "mr-changes", path: `${mr}?tab=changes`, as: "alice" },
     { name: "mr-versions", path: `${mr}?tab=versions`, as: "alice" },
+    { name: "mr-interdiff", path: `${mr}?tab=changes&from=1&to=2`, as: "alice" },
     { name: "error-404", path: "/alice/no-such-project", status: 404 },
     { name: "mobile-home", path: "/", as: "alice", view: "mobile" },
     { name: "mobile-repo-overview", path: repo, as: "alice", view: "mobile" },
