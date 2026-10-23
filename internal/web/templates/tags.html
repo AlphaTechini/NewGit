@@ -1,0 +1,11 @@
+{{define "crumbs"}}<span class="sep">/</span><span>Tags</span>{{end}}
+{{define "content"}}
+<h1>Tags</h1>
+<ul class="list card">
+{{range .Data.Tags}}
+  <li><a class="title mono" href="/{{$.Repo.Path}}/-/tree/{{.Name}}">{{.Name}}</a> <a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{short .OID}}</a> {{.Subject}} · {{timeago .Date}}</li>
+{{else}}
+  <li class="muted">No tags yet.</li>
+{{end}}
+</ul>
+{{end}}

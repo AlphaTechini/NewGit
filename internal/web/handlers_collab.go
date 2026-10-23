@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/AlphaTechini/newgit/internal/gitx"
 	"github.com/AlphaTechini/newgit/internal/store"
@@ -49,7 +51,7 @@ func (s *Server) handleIssues(w http.ResponseWriter, r *http.Request, repo store
 			s.render(w, r, "issue_new.html", &Page{Title: "New issue", Repo: rc, Nav: "issues", Error: err.Error(), Data: map[string]any{"Title": r.PostForm.Get("title"), "Body": r.PostForm.Get("body")}})
 			return
 		}
-		http.Redirect(w, r, fmt.Sprintf("/%s/-/issues/%d", repo.Path(), is.Number), http.StatusSeeOther)
+		http.Redirect(w, r, withFlash(fmt.Sprintf("/%s/-/issues/%d", repo.Path(), is.Number), "issue_opened"), http.StatusSeeOther)
 	default:
 		numS, action, _ := strings.Cut(sub, "/")
 		n, err := strconv.Atoi(numS)
@@ -68,7 +70,11 @@ func (s *Server) handleIssues(w http.ResponseWriter, r *http.Request, repo store
 			if u := currentUser(r); u != nil {
 				canState = u.ID == is.AuthorID || repo.CanWrite(u.ID)
 			}
-			s.render(w, r, "issue.html", &Page{Title: is.Title + " · Issue #" + numS, Repo: rc, Nav: "issues", Data: map[string]any{"Issue": is, "CanState": canState}})
+			participants := []string{is.Author}
+			for _, c := range is.Comments {
+				participants = appendUnique(participants, c.Author)
+			}
+			s.render(w, r, "issue.html", &Page{Title: is.Title + " · Issue #" + numS, Repo: rc, Nav: "issues", Data: map[string]any{"Issue": is, "CanState": canState, "Participants": participants}})
 		case "comment":
 			u := s.checkPost(w, r)
 			if u == nil {
@@ -78,10 +84,13 @@ func (s *Server) handleIssues(w http.ResponseWriter, r *http.Request, repo store
 				s.storeError(w, r, err)
 				return
 			}
+			code := "commented"
 			if r.PostForm.Get("close") == "1" {
-				_ = s.Store.SetIssueState(r.Context(), repo.ID, n, *u, "closed")
+				if s.Store.SetIssueState(r.Context(), repo.ID, n, *u, "closed") == nil {
+					code = "closed"
+				}
 			}
-			http.Redirect(w, r, fmt.Sprintf("/%s/-/issues/%d#latest", repo.Path(), n), http.StatusSeeOther)
+			http.Redirect(w, r, withFlash(fmt.Sprintf("/%s/-/issues/%d#latest", repo.Path(), n), code), http.StatusSeeOther)
 		case "state":
 			u := s.checkPost(w, r)
 			if u == nil {
@@ -91,7 +100,7 @@ func (s *Server) handleIssues(w http.ResponseWriter, r *http.Request, repo store
 				s.storeError(w, r, err)
 				return
 			}
-			http.Redirect(w, r, fmt.Sprintf("/%s/-/issues/%d", repo.Path(), n), http.StatusSeeOther)
+			http.Redirect(w, r, withFlash(fmt.Sprintf("/%s/-/issues/%d", repo.Path(), n), stateFlash(r.PostForm.Get("state"))), http.StatusSeeOther)
 		default:
 			s.errorPage(w, r, 404, "Page not found.")
 		}
@@ -133,7 +142,7 @@ func (s *Server) handleMRs(w http.ResponseWriter, r *http.Request, repo store.Re
 				s.storeError(w, r, err)
 				return
 			}
-			http.Redirect(w, r, fmt.Sprintf("/%s/-/merge_requests/%d#latest", repo.Path(), n), http.StatusSeeOther)
+			http.Redirect(w, r, withFlash(fmt.Sprintf("/%s/-/merge_requests/%d#latest", repo.Path(), n), "commented"), http.StatusSeeOther)
 		case "state":
 			u := s.checkPost(w, r)
 			if u == nil {
@@ -143,7 +152,7 @@ func (s *Server) handleMRs(w http.ResponseWriter, r *http.Request, repo store.Re
 				s.storeError(w, r, err)
 				return
 			}
-			http.Redirect(w, r, fmt.Sprintf("/%s/-/merge_requests/%d", repo.Path(), n), http.StatusSeeOther)
+			http.Redirect(w, r, withFlash(fmt.Sprintf("/%s/-/merge_requests/%d", repo.Path(), n), stateFlash(r.PostForm.Get("state"))), http.StatusSeeOther)
 		case "merge":
 			u := s.checkPost(w, r)
 			if u == nil {
@@ -153,7 +162,7 @@ func (s *Server) handleMRs(w http.ResponseWriter, r *http.Request, repo store.Re
 				s.storeError(w, r, err)
 				return
 			}
-			http.Redirect(w, r, fmt.Sprintf("/%s/-/merge_requests/%d?flash=Merged", repo.Path(), n), http.StatusSeeOther)
+			http.Redirect(w, r, fmt.Sprintf("/%s/-/merge_requests/%d?flash=merged", repo.Path(), n), http.StatusSeeOther)
 		default:
 			s.errorPage(w, r, 404, "Page not found.")
 		}
@@ -166,8 +175,9 @@ func (s *Server) handleNewMR(w http.ResponseWriter, r *http.Request, repo store.
 		return
 	}
 	branches, _ := gitx.ListBranches(r.Context(), repo.Dir)
-	data := map[string]any{"Branches": branches, "Source": r.URL.Query().Get("source"), "Target": rc.Default, "Title": "", "Description": ""}
+	data := map[string]any{"Branches": branches, "Source": r.URL.Query().Get("source"), "Target": rc.Default, "Title": "", "Description": "", "Compared": false}
 	if r.Method == http.MethodGet {
+		s.compareBranches(r, repo, rc, data)
 		s.render(w, r, "mr_new.html", &Page{Title: "New merge request", Repo: rc, Nav: "mrs", Data: data})
 		return
 	}
@@ -181,7 +191,64 @@ func (s *Server) handleNewMR(w http.ResponseWriter, r *http.Request, repo store.
 		s.render(w, r, "mr_new.html", &Page{Title: "New merge request", Repo: rc, Nav: "mrs", Error: err.Error(), Data: data})
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/%s/-/merge_requests/%d", repo.Path(), m.Number), http.StatusSeeOther)
+	http.Redirect(w, r, withFlash(fmt.Sprintf("/%s/-/merge_requests/%d", repo.Path(), m.Number), "mr_opened"), http.StatusSeeOther)
+}
+
+// stateFlash maps a requested issue/MR state to a flash code.
+func stateFlash(state string) string {
+	if state == "closed" {
+		return "closed"
+	}
+	return "reopened"
+}
+
+func appendUnique(list []string, v string) []string {
+	if v == "" {
+		return list
+	}
+	for _, x := range list {
+		if x == v {
+			return list
+		}
+	}
+	return append(list, v)
+}
+
+// compareBranches fills Commits, Diffs, CommitCount and Compared on the
+// new-MR page when ?source= (and optionally ?target=, default branch) name
+// existing branches.
+func (s *Server) compareBranches(r *http.Request, repo store.Repo, rc *RepoCtx, data map[string]any) {
+	ctx := r.Context()
+	src, tgt := r.URL.Query().Get("source"), r.URL.Query().Get("target")
+	if tgt == "" {
+		tgt = rc.Default
+	}
+	if src == "" || !gitx.SafeRevision(src) || !gitx.SafeRevision(tgt) {
+		return
+	}
+	srcOID, ok1 := gitx.RefTarget(ctx, repo.Dir, "refs/heads/"+src)
+	tgtOID, ok2 := gitx.RefTarget(ctx, repo.Dir, "refs/heads/"+tgt)
+	if !ok1 || !ok2 {
+		return
+	}
+	data["Target"] = tgt
+	mb, err := gitx.MergeBase(ctx, repo.Dir, tgtOID, srcOID)
+	if err != nil || mb == "" {
+		return
+	}
+	commits, err := gitx.LogRangeLimit(ctx, repo.Dir, 100, srcOID, "^"+mb)
+	if err != nil {
+		return
+	}
+	if commits == nil {
+		commits = []gitx.Commit{}
+	}
+	diffs, err := gitx.DiffCommits(ctx, repo.Dir, mb, srcOID)
+	if err != nil {
+		return
+	}
+	data["Commits"], data["Diffs"], data["Compared"] = commits, diffs, true
+	data["CommitCount"], _ = gitx.CountCommits(ctx, repo.Dir, srcOID, "^"+mb)
 }
 
 // RangeLine is one rendered line of git range-diff output.
@@ -221,8 +288,28 @@ func (s *Server) handleMR(w http.ResponseWriter, r *http.Request, repo store.Rep
 	}
 	ctx := r.Context()
 	tab := r.URL.Query().Get("tab")
-	data := map[string]any{"MR": m, "Tab": tab}
+	data := map[string]any{"MR": m, "Tab": tab, "LatestVersion": m.Latest().N, "InterFrom": 0, "InterTo": 0}
 	latest := m.Latest()
+	if m.State == "opened" {
+		data["Status"] = s.Store.CheckMerge(ctx, repo, m)
+	}
+	participants := []string{m.Author}
+	type seen struct {
+		at   time.Time
+		name string
+	}
+	var order []seen
+	for _, c := range m.Comments {
+		order = append(order, seen{c.At, c.Author})
+	}
+	for _, v := range m.Versions {
+		order = append(order, seen{v.At, v.Pusher})
+	}
+	sort.SliceStable(order, func(i, j int) bool { return order[i].at.Before(order[j].at) })
+	for _, e := range order {
+		participants = appendUnique(participants, e.name)
+	}
+	data["Participants"] = participants
 	u := currentUser(r)
 	if u != nil {
 		data["CanState"] = u.ID == m.AuthorID || repo.CanWrite(u.ID)
@@ -256,6 +343,14 @@ func (s *Server) handleMR(w http.ResponseWriter, r *http.Request, repo store.Rep
 		if v == len(m.Versions) {
 			from = base
 		}
+		// Interdiff: ?from=A&to=B (A<B) shows what changed between two versions.
+		ia, ib := atoi(r.URL.Query().Get("from"), 0), atoi(r.URL.Query().Get("to"), 0)
+		if ia >= 1 && ib <= len(m.Versions) && ia < ib {
+			ver = m.Versions[ib-1]
+			from = m.Versions[ia-1].Head
+			v = ib
+			data["InterFrom"], data["InterTo"] = ia, ib
+		}
 		if from != "" {
 			diffs, err := gitx.DiffCommits(ctx, repo.Dir, from, ver.Head)
 			if err == nil {
@@ -267,6 +362,20 @@ func (s *Server) handleMR(w http.ResponseWriter, r *http.Request, repo store.Rep
 		to := atoi(r.URL.Query().Get("to"), len(m.Versions))
 		from := atoi(r.URL.Query().Get("from"), to-1)
 		data["From"], data["To"] = from, to
+		vc := map[int]int{}
+		for _, v := range m.Versions {
+			vb := v.Base
+			if vb == "" {
+				vb = base
+			}
+			if vb == "" {
+				continue
+			}
+			if n, err := gitx.CountCommits(ctx, repo.Dir, v.Head, "^"+vb); err == nil {
+				vc[v.N] = n
+			}
+		}
+		data["VersionCommits"] = vc
 		if len(m.Versions) >= 2 && from >= 1 && to >= 1 && from <= len(m.Versions) && to <= len(m.Versions) && from != to {
 			a, b := m.Versions[from-1], m.Versions[to-1]
 			baseA, baseB := a.Base, b.Base
@@ -283,10 +392,6 @@ func (s *Server) handleMR(w http.ResponseWriter, r *http.Request, repo store.Rep
 				data["Range"] = parseRangeDiff(out)
 				data["RangeRaw"] = out
 			}
-		}
-	default:
-		if m.State == "opened" {
-			data["Status"] = s.Store.CheckMerge(ctx, repo, m)
 		}
 	}
 	data["AGitHint"] = fmt.Sprintf("git push origin HEAD:refs/for/%s -o topic=%s", m.TargetBranch, m.Topic)

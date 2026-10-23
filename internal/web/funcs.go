@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 	gmhtml "github.com/yuin/goldmark/renderer/html"
 
 	"github.com/AlphaTechini/newgit/internal/gitx"
@@ -21,6 +23,7 @@ import (
 
 var md = goldmark.New(
 	goldmark.WithExtensions(extension.GFM),
+	goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 	goldmark.WithRendererOptions(gmhtml.WithHardWraps()),
 	// Raw HTML is not rendered (goldmark's default is safe).
 )
@@ -33,13 +36,85 @@ func renderMarkdown(src string) template.HTML {
 	return template.HTML(buf.String())
 }
 
-var highlighter = chtml.New(chtml.WithClasses(true), chtml.WithLineNumbers(true), chtml.LineNumbersInTable(true), chtml.WithLinkableLineNumbers(true, "L"))
+// highlighter emits inline line numbers: every <span class="line"> contains
+// its own <span class="ln" id="L12"><a class="lnlinks" href="#L12">12</a></span>
+// followed by <span class="cl">code</span>.
+var highlighter = chtml.New(chtml.WithClasses(true), chtml.WithLineNumbers(true), chtml.WithLinkableLineNumbers(true, "L"))
 
+// chromaCSS returns the syntax-highlighting stylesheet: the `github` palette
+// unscoped (light), and `github-dark` scoped to dark mode, both for the
+// system preference (unless data-theme="light") and for data-theme="dark".
+// Chroma's own page background is removed so the page surface shows through.
+// Selectors that exist only in the light palette are reset (`unset`) in the
+// dark scopes so a light-only colour can never leak into dark mode.
 func chromaCSS() string {
-	var buf bytes.Buffer
-	style := styles.Get("github")
-	_ = chtml.New(chtml.WithClasses(true), chtml.WithLineNumbers(true), chtml.LineNumbersInTable(true)).WriteCSS(&buf, style)
-	return buf.String()
+	f := chtml.New(chtml.WithClasses(true), chtml.WithLineNumbers(true))
+	var lb, db bytes.Buffer
+	_ = f.WriteCSS(&lb, styles.Get("github"))
+	_ = f.WriteCSS(&db, styles.Get("github-dark"))
+	light, dark := parseChromaCSS(lb.String()), parseChromaCSS(db.String())
+	inDark := map[string]bool{}
+	for _, r := range dark {
+		inDark[r.sel] = true
+	}
+	for _, r := range light {
+		if !inDark[r.sel] {
+			dark = append(dark, chromaRule{r.sel, resetDecls(r.body)})
+		}
+	}
+	var out strings.Builder
+	write := func(rules []chromaRule, prefix string) {
+		for _, r := range rules {
+			out.WriteString(prefix + r.sel + " { " + r.body + " }\n")
+		}
+	}
+	write(light, "")
+	out.WriteString("@media (prefers-color-scheme: dark) {\n")
+	write(dark, `:root:not([data-theme="light"]) `)
+	out.WriteString("}\n")
+	write(dark, `:root[data-theme="dark"] `)
+	return out.String()
+}
+
+type chromaRule struct{ sel, body string }
+
+var bgDeclRe = regexp.MustCompile(`\s*background-color:\s*[^;]+;?`)
+
+// parseChromaCSS reads chroma's one-rule-per-line CSS, dropping comments and
+// the .bg rule, and stripping the background from the bare .chroma rule.
+func parseChromaCSS(css string) []chromaRule {
+	var rules []chromaRule
+	for _, line := range strings.Split(css, "\n") {
+		if i := strings.Index(line, "*/"); i >= 0 {
+			line = line[i+2:]
+		}
+		line = strings.TrimSpace(line)
+		open, closing := strings.Index(line, "{"), strings.LastIndex(line, "}")
+		if open < 0 || closing < open {
+			continue
+		}
+		sel, body := strings.TrimSpace(line[:open]), strings.TrimSpace(line[open+1:closing])
+		switch sel {
+		case ".bg":
+			continue
+		case ".chroma":
+			body = strings.TrimSpace(bgDeclRe.ReplaceAllString(body, ""))
+		}
+		rules = append(rules, chromaRule{sel, body})
+	}
+	return rules
+}
+
+// resetDecls turns "color: #fff; font-weight: bold" into
+// "color: unset; font-weight: unset".
+func resetDecls(body string) string {
+	var out []string
+	for _, d := range strings.Split(body, ";") {
+		if prop, _, ok := strings.Cut(d, ":"); ok {
+			out = append(out, strings.TrimSpace(prop)+": unset")
+		}
+	}
+	return strings.Join(out, "; ")
 }
 
 func highlight(filename, src string) template.HTML {
@@ -128,10 +203,19 @@ func avatarHue(s string) int {
 
 func funcMap(s *Server) template.FuncMap {
 	return template.FuncMap{
-		"markdown":   renderMarkdown,
-		"timeago":    timeAgo,
-		"datetime":   func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
-		"isodate":    func(t time.Time) string { return t.UTC().Format(time.RFC3339) },
+		"markdown": renderMarkdown,
+		"timeago":  timeAgo,
+		"datetime": func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
+		"isodate":  func(t time.Time) string { return t.UTC().Format(time.RFC3339) },
+		"iso":      func(t time.Time) string { return t.UTC().Format(time.RFC3339) },
+		"day":      func(t time.Time) string { return t.UTC().Format("Jan 2, 2006") },
+		"pct": func(a, b int) int {
+			if b <= 0 {
+				return 0
+			}
+			return a * 100 / b
+		},
+		"diffstat":   diffStat,
 		"short":      short,
 		"size":       humanSize,
 		"initials":   initials,
@@ -192,4 +276,20 @@ func funcMap(s *Server) template.FuncMap {
 type crumb struct {
 	Name string
 	Path string
+}
+
+// DiffStat is the aggregate of a []gitx.FileDiff (template func `diffstat`).
+type DiffStat struct {
+	Files     int
+	Additions int
+	Deletions int
+}
+
+func diffStat(files []gitx.FileDiff) DiffStat {
+	st := DiffStat{Files: len(files)}
+	for _, f := range files {
+		st.Additions += f.Additions
+		st.Deletions += f.Deletions
+	}
+	return st
 }
