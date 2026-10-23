@@ -8,7 +8,7 @@
   </div>
   <div class="issuable-meta">
     {{template "statepill" (dict "Kind" "mr" "State" $m.State)}}
-    <a class="who" href="/{{$m.Author}}">@{{$m.Author}}</a> {{if eq $m.State "merged"}}merged{{else}}wants to merge{{end}}
+    <a class="who" href="/{{$m.Author}}">@{{$m.Author}}</a> {{if eq $m.State "merged"}}merged{{else if eq $m.State "closed"}}wanted to merge{{else}}wants to merge{{end}}
     {{if $m.SourceBranch}}<a class="ref" href="/{{.Repo.Path}}/-/tree/{{$m.SourceBranch}}">{{$m.SourceBranch}}</a>{{else}}<span class="pill agit" title="Opened by pushing to refs/for/{{$m.TargetBranch}}">{{template "icon" "push"}}AGit</span> <span class="ref" title="topic">{{$m.Topic}}</span>{{end}}
     {{template "iconc" (dict "N" "arrow-right" "C" "xs")}} <a class="ref" href="/{{.Repo.Path}}/-/tree/{{$m.TargetBranch}}">{{$m.TargetBranch}}</a>
     <span class="sep-dot"></span>opened {{template "time" $m.Created}}
@@ -36,20 +36,17 @@
 {{else}}<div class="card">{{template "blank" (dict "Icon" "commit" "Title" "No commits" "Text" "The latest version has no commits beyond the target branch." "Class" "compact")}}</div>{{end}}
 
 {{else if eq $tab "changes"}}
-<div class="toolbar">
-  {{if .Data.InterTo}}
-    <span class="pill accent" title="A plain diff of the two version heads. Changes that came from a rebase are included. Use range-diff to see through a rebase.">{{template "icon" "compare"}}Interdiff</span>
-    <span class="muted">Changes from <span class="pill version">v{{.Data.InterFrom}}</span> to <span class="pill version">v{{.Data.InterTo}}</span>, comparing the two version heads.</span>
-    <span class="spacer"></span>
-    <a class="btn sm ghost" href="{{$base}}?tab=versions&amp;from={{.Data.InterFrom}}&amp;to={{.Data.InterTo}}">Range-diff</a>
-    <a class="btn sm" href="{{$base}}?tab=changes">{{template "icon" "x"}}Back to v{{$latest}} changes</a>
-  {{else}}
-    <span class="muted">Changes in</span> <span class="pill version">v{{.Data.Version}}</span> <span class="muted">against the merge base with <span class="ref">{{$m.TargetBranch}}</span></span>
-    <span class="spacer"></span>
-    {{if gt .Data.Version 1}}<a class="btn sm" href="{{$base}}?tab=changes&amp;from={{sub .Data.Version 1}}&amp;to={{.Data.Version}}">{{template "icon" "compare"}}Interdiff v{{sub .Data.Version 1}} to v{{.Data.Version}}</a>
-    <a class="btn sm ghost" href="{{$base}}?tab=versions&amp;from={{sub .Data.Version 1}}&amp;to={{.Data.Version}}">Range-diff</a>{{end}}
-  {{end}}
+{{if .Data.InterTo}}
+<div class="diff-context interdiff">
+  <div class="diff-context-text"><span class="pill accent" title="A plain diff of the two version heads. Changes that came from a rebase are included; use range-diff to see through a rebase.">{{template "icon" "compare"}}Interdiff</span> <span class="pill version">v{{.Data.InterFrom}}</span> {{template "iconc" (dict "N" "arrow-right" "C" "xs i-muted")}} <span class="pill version">v{{.Data.InterTo}}</span> <span class="muted hide-sm">Diff of the two version heads.</span></div>
+  <div class="btn-row"><a class="btn sm" href="{{$base}}?tab=versions&amp;from={{.Data.InterFrom}}&amp;to={{.Data.InterTo}}">{{template "icon" "compare"}}Range-diff</a><a class="btn sm" href="{{$base}}?tab=changes">{{template "icon" "x"}}<span class="hide-sm">Back to </span>v{{$latest}} changes</a></div>
 </div>
+{{else}}
+<div class="diff-context">
+  <div class="diff-context-text"><span class="muted">Changes in</span> <span class="pill version">v{{.Data.Version}}</span> <span class="muted">against the merge base with</span> <span class="ref">{{$m.TargetBranch}}</span></div>
+  {{if gt .Data.Version 1}}<div class="btn-row"><a class="btn sm" href="{{$base}}?tab=changes&amp;from={{sub .Data.Version 1}}&amp;to={{.Data.Version}}">{{template "icon" "compare"}}Interdiff v{{sub .Data.Version 1}} to v{{.Data.Version}}</a><a class="btn sm" href="{{$base}}?tab=versions&amp;from={{sub .Data.Version 1}}&amp;to={{.Data.Version}}">Range-diff</a></div>{{end}}
+</div>
+{{end}}
 {{$rev := ""}}{{if .Data.Version}}{{$rev = (index $m.Versions (sub .Data.Version 1)).Head}}{{end}}
 {{template "diffview" (dict "Diffs" .Data.Diffs "RepoPath" .Repo.Path "Rev" $rev "Empty" "No file changes. Only commit metadata differs between these versions.")}}
 
@@ -65,7 +62,7 @@
   {{range $m.Versions}}{{$n := .N}}<li class="version-card{{if eq .N $latest}} latest{{end}}"><span class="vnum">v{{.N}}</span>
     <div class="grow"><div><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.Head}}">{{short .Head}}</a> <span class="muted small">pushed by</span> <a class="strong" href="/{{.Pusher}}">@{{.Pusher}}</a> <span class="muted small">{{template "time" .At}}</span>{{if eq .N $latest}} <span class="pill accent">Latest</span>{{end}}</div>
       <div class="meta small muted">{{with $.Data.VersionCommits}}{{with index . $n}}{{.}} commit{{if ne . 1}}s{{end}}<span class="sep-dot"></span>{{end}}{{end}}{{if .Base}}base <span class="sha">{{short .Base}}</span>{{end}}</div></div>
-    <div class="end">{{if gt .N 1}}<a class="btn sm" href="{{$base}}?tab=versions&amp;from={{sub .N 1}}&amp;to={{.N}}" aria-label="Range-diff v{{sub .N 1}} to v{{.N}}">{{template "icon" "compare"}}<span class="hide-sm">Range-diff </span>v{{sub .N 1}}</a>{{end}}<a class="btn sm ghost" href="{{$base}}?tab=changes&amp;version={{.N}}">Changes</a></div></li>{{end}}
+    <div class="end">{{if gt .N 1}}<a class="btn sm" href="{{$base}}?tab=versions&amp;from={{sub .N 1}}&amp;to={{.N}}" aria-label="Range-diff v{{sub .N 1}} to v{{.N}}">{{template "icon" "compare"}}<span class="hide-sm">Range-diff </span>v{{sub .N 1}}</a>{{end}}<a class="btn sm" href="{{$base}}?tab=changes&amp;version={{.N}}">Changes</a></div></li>{{end}}
   </ol>
 </div>
 {{if lt (len $m.Versions) 2}}
@@ -75,7 +72,7 @@
 {{else if .Data.RangeError}}<div class="alert danger mt-6" role="alert">{{template "icon" "alert"}}<div class="alert-body"><span class="alert-title">range-diff failed</span>{{.Data.RangeError}}</div></div>
 {{else if .Data.Range}}
 <div class="section-head"><h2 class="section-title">Range-diff <span class="pill version">v{{.Data.From}}</span> {{template "iconc" (dict "N" "arrow-right" "C" "i-muted")}} <span class="pill version">v{{.Data.To}}</span></h2>
-  <div class="section-actions"><a class="btn sm ghost" href="{{$base}}?tab=changes&amp;from={{.Data.From}}&amp;to={{.Data.To}}">View as interdiff</a></div></div>
+  <div class="section-actions"><a class="btn sm" href="{{$base}}?tab=changes&amp;from={{.Data.From}}&amp;to={{.Data.To}}">{{template "icon" "file-diff"}}View as interdiff</a></div></div>
 <div class="legend"><span><span class="sym">=</span>Unchanged commit</span><span><span class="sym mod">!</span>Changed (diff of diffs below)</span><span><span class="sym del">&lt;</span>Only in v{{.Data.From}}</span><span><span class="sym add">&gt;</span>Only in v{{.Data.To}}</span></div>
 <div class="rangediff" role="region" aria-label="Range-diff" tabindex="0">{{range .Data.Range}}<div class="{{.Kind}}">{{.Text}}</div>{{end}}</div>
 {{else}}<div class="card mt-6">{{template "blank" (dict "Icon" "compare" "Title" "Pick two different versions" "Text" "Choose a from and to version above to see what changed between them." "Class" "compact")}}</div>{{end}}
@@ -92,7 +89,7 @@
 {{if eq $m.State "merged"}}
     <div class="mergebox merged"><div class="mb-row"><span class="mb-icon">{{template "icon" "merge"}}</span><div class="mb-main">
       <div class="mb-title">Merged by @{{$m.MergedBy}} into {{$m.TargetBranch}}</div>
-      <div class="mb-text">As <a class="sha" href="/{{.Repo.Path}}/-/commit/{{$m.MergeCommit}}">{{short $m.MergeCommit}}</a>. <span class="pill merged">merged</span></div></div></div></div>
+      <div class="mb-text">As merge commit <a class="sha" href="/{{.Repo.Path}}/-/commit/{{$m.MergeCommit}}">{{short $m.MergeCommit}}</a>. Nothing was checked out: the merge was computed with <code>git merge-tree</code>.</div></div></div></div>
 {{else if eq $m.State "closed"}}
     <div class="mergebox closed"><div class="mb-row"><span class="mb-icon">{{template "icon" "mr-closed"}}</span><div class="mb-main"><div class="mb-title">Closed without merging</div><div class="mb-text">Reopen it to merge, or push a new version first.</div></div></div></div>
 {{else}}{{with .Data.Status}}
@@ -112,7 +109,7 @@
       </div></details>
     </div>
 {{end}}{{end}}
-    <div class="tl-break" id="latest"></div>
+    <div class="tl-break" id="ng:latest"></div>
     {{if .User}}
     <form method="post" action="{{$base}}/comment" class="composer">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
@@ -125,7 +122,7 @@
   </div>
   <aside class="meta-side" aria-label="Merge request details">
     <div class="meta-block"><div class="meta-label">Reviewers and participants</div><div class="avatars">{{range .Data.Participants}}<a href="/{{.}}" title="@{{.}}">{{template "avatar" (dict "Name" . "Size" "")}}<span class="sr-only">@{{.}}</span></a>{{end}}</div></div>
-    <div class="meta-block"><div class="meta-label">Latest version</div>{{with $m.Latest}}<div class="meta-row"><span class="pill version">v{{.N}}</span><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.Head}}">{{short .Head}}</a></div><div class="meta-row muted">pushed by @{{.Pusher}} {{template "time" .At}}</div>{{end}}</div>
+    <div class="meta-block"><div class="meta-label">Latest version</div>{{with $m.Latest}}<div class="meta-row"><span class="pill version">v{{.N}}</span><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.Head}}">{{short .Head}}</a></div><div class="meta-row muted"><span>pushed by @{{.Pusher}} {{template "time" .At}}</span></div>{{end}}</div>
     <div class="meta-block"><div class="meta-label">Stored in Git</div><p class="meta-value mono">refs/newgit/mr/{{$m.Number}}<br>refs/merge-requests/{{$m.Number}}/v1..v{{$latest}}</p></div>
   </aside>
 </div>

@@ -18,7 +18,7 @@
           <div class="note-body markdown sm">{{with $i.Body}}{{markdown .}}{{else}}<p class="muted">No description provided.</p>{{end}}</div></article></li>
       {{range $i.Timeline}}{{template "tlevent" (dict "E" . "Noun" "issue")}}{{end}}
     </ol>
-    <div class="tl-break" id="latest"></div>
+    <div class="tl-break" id="ng:latest"></div>
     {{if .User}}
     <form method="post" action="/{{.Repo.Path}}/-/issues/{{$i.Number}}/comment" class="composer">
       <input type="hidden" name="csrf" value="{{.CSRF}}">

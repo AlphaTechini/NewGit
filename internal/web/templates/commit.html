@@ -5,7 +5,7 @@
     <div class="issuable-actions"><a class="btn sm" href="/{{.Repo.Path}}/-/tree/{{$c.OID}}">{{template "icon" "code"}}Browse files</a></div></div>
   <div class="issuable-meta">{{template "avatar" (dict "Name" $c.AuthorName "Size" "sm")}}<span class="who">{{$c.AuthorName}}</span> authored {{template "time" $c.AuthorDate}}<span class="sep-dot"></span><span class="sha">{{short $c.OID}}</span></div>
 </header>
-{{with $c.Body}}<pre class="codebox wrap mb-0" style="margin-bottom:20px">{{.}}</pre>{{end}}
+{{with $c.Body}}<pre class="codebox wrap commit-body">{{.}}</pre>{{end}}
 <div class="card"><div class="card-body"><dl class="kv">
   <dt>Pushed by</dt><dd>{{with .Data.Pusher}}{{template "pusher" .}} <span class="muted">via {{.Via}}, {{template "time" .At}}. Recorded by the server from an authenticated push. The author below is whatever the commit claims.</span>{{else}}<span class="unverified">Pusher unknown</span> <span class="muted">No push-log entry, for example history imported before NewGit recorded pushes.</span>{{end}}</dd>
   <dt>Author</dt><dd>{{$c.AuthorName}} <span class="muted">&lt;{{$c.AuthorEmail}}&gt;</span><span class="sep-dot"></span>{{datetime $c.AuthorDate}}</dd>

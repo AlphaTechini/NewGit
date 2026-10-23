@@ -24,7 +24,7 @@
   <div class="card-header"><span class="card-title">Create a token</span></div>
   <div class="card-body">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <div class="field"><label for="tname">Name</label><input type="text" id="tname" name="name" required maxlength="60" placeholder="laptop git, claude agent" style="max-width:360px"></div>
+    <div class="field"><label for="tname">Name</label><input type="text" id="tname" name="name" required maxlength="60" placeholder="laptop git, claude agent" class="w-sm"></div>
     <div class="field"><span class="label" id="scope-l">Scope</span>
       <div class="choices" role="radiogroup" aria-labelledby="scope-l">
         <label class="choice"><input type="radio" name="scope" value="write" checked><span><span class="choice-title">Write</span><span class="choice-desc">Push, open issues and merge requests</span></span></label>

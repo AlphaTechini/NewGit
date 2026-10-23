@@ -31,6 +31,7 @@
 <ul class="list card dense">{{range .Data.Commits}}<li>{{template "avatar" (dict "Name" .AuthorName "Size" "sm")}}<div class="grow"><a class="title" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{.Subject}}</a></div><div class="end"><span class="hide-sm">{{.AuthorName}}</span><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{short .OID}}</a></div></li>{{else}}<li class="list-empty">No new commits. Only file changes differ.</li>{{end}}</ul>
 <div class="section-head"><h2 class="section-title">Changes</h2></div>
 {{template "diffview" (dict "Diffs" .Data.Diffs "RepoPath" .Repo.Path "Rev" .Data.Source)}}
+{{if .Data.DiffsTruncated}}<p class="footer-note">{{template "icon" "info"}}Showing the first 300 changed files. The merge request itself includes every file.</p>{{end}}
 {{else}}
 <div class="card">{{template "blank" (dict "Icon" "merge" "Title" "Nothing to merge" "Text" (printf "%s has no changes that %s does not already contain. Pick a different source branch to continue." .Data.Source .Data.Target) "Class" "compact")}}</div>
 {{end}}

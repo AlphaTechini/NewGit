@@ -4,8 +4,6 @@
   <div>
     <div class="toolbar">
       {{template "refswitch" .}}
-      <a class="btn sm ghost" href="/{{.Repo.Path}}/-/branches">{{template "icon" "branch"}}{{.Repo.BranchCount}} branch{{if ne .Repo.BranchCount 1}}es{{end}}</a>
-      <a class="btn sm ghost hide-sm" href="/{{.Repo.Path}}/-/tags">{{template "icon" "tag"}}{{.Repo.TagCount}} tag{{if ne .Repo.TagCount 1}}s{{end}}</a>
       <span class="spacer"></span>
       <a class="btn sm" href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}">{{template "icon" "history"}}History</a>
     </div>
@@ -20,12 +18,12 @@
     <div class="meta-block"><div class="meta-label">About</div>
       <p class="meta-value">{{with .Repo.Description}}{{.}}{{else}}<span class="muted">No description.</span>{{end}}</p>
       <div class="meta-row">{{template "icon" "user"}}<a href="/{{.Repo.Owner}}">@{{.Repo.Owner}}</a></div>
-      <div class="meta-row">{{template "icon" "clock"}}Created {{template "time" .Repo.Created}}</div></div>
+      <div class="meta-row">{{template "icon" "clock"}}<span>Created {{template "time" .Repo.Created}}</span></div></div>
     <div class="meta-block"><div class="meta-label">Collaboration data</div>
       <p class="muted">Issues and reviews are stored in this repository. Fetch them with git.</p>
       {{template "codebox" (dict "ID" "about-fetch" "Code" "git fetch origin '+refs/newgit/*:refs/newgit/*'")}}</div>
     {{if .Data.Pushes}}<div class="meta-block"><div class="meta-label">Recent pushes</div>
-      {{range .Data.Pushes}}<div class="meta-row" style="align-items:flex-start;margin-top:10px">{{template "avatar" (dict "Name" .By "Size" "sm")}}<div class="grow"><b>@{{.By}}</b> <span class="muted">pushed {{len .Commits}} commit{{if ne (len .Commits) 1}}s{{end}}</span><div class="muted xsmall">{{range .Refs}}<span class="mono">{{trimPrefix .Ref "refs/heads/"}}</span> {{end}}<span class="sep-dot"></span>{{template "time" .At}}</div></div></div>{{end}}
+      <ul class="feed">{{range .Data.Pushes}}<li>{{template "avatar" (dict "Name" .By "Size" "sm")}}<div class="feed-body"><div><a class="strong" href="/{{.By}}">@{{.By}}</a> <span class="muted">pushed {{len .Commits}} commit{{if ne (len .Commits) 1}}s{{end}}</span></div><div class="feed-meta">{{range .Refs}}{{if hasPrefix .Ref "refs/merge-requests/"}}<span class="ref" title="{{.Ref}}">!{{index (split .Ref "/") 2}}</span>{{else if hasPrefix .Ref "refs/tags/"}}<span class="ref" title="{{.Ref}}">{{template "iconc" (dict "N" "tag" "C" "xs")}} {{trimPrefix .Ref "refs/tags/"}}</span>{{else}}<span class="ref" title="{{.Ref}}">{{trimPrefix .Ref "refs/heads/"}}</span>{{end}}{{end}}<span class="muted">{{template "time" .At}}</span></div></div></li>{{end}}</ul>
       <a class="small" href="/{{.Repo.Path}}/-/pushes">View push log</a></div>{{end}}
   </aside>
 </div>

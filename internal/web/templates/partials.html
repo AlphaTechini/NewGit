@@ -168,7 +168,6 @@
       <span class="hide-sm">{{template "pusher" $tree.Pusher}}</span>
       <a class="sha" href="/{{$rp}}/-/commit/{{.OID}}" aria-label="Commit {{short .OID}}">{{short .OID}}</a>
       <span class="lc-meta">{{template "time" .AuthorDate}}</span>
-      <a class="btn xs ghost" href="/{{$rp}}/-/commits/{{$ref}}{{with $tree.Path}}/{{.}}{{end}}">{{template "icon" "history"}}History</a>
     </div>
   </div>{{end}}{{end}}
   <table class="files">

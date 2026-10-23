@@ -15,15 +15,17 @@
     <div class="term-head">{{template "icon" "terminal"}}Propose a change, no fork</div>
     <pre><span class="p">$ </span>git push origin HEAD:refs/for/main -o title="Fix login"
 <span class="o">remote: </span><span class="ok">Created merge request !3</span>
-<span class="o">remote: </span><span class="hl">{{.BaseURL}}/alice/project/-/merge_requests/3</span>
-<span class="p">$ </span>git commit --amend &amp;&amp; git push origin HEAD:refs/for/main -o topic=fix-login
+<span class="o">remote: </span><span class="hl">{{.BaseURL}}/alice/aurora/-/merge_requests/3</span>
+<span class="p">$ </span>git commit --amend
+<span class="p">$ </span>git push origin HEAD:refs/for/main -o topic=fix-login
 <span class="o">remote: </span><span class="ok">Updated merge request !3 to version 2</span></pre>
   </div>
 </section>
 <div class="features">
   <div class="feature"><span class="feature-icon">{{template "icon" "key"}}</span><h3>No passwords</h3><p>Your browser makes a key that cannot be copied out. That device is your account.</p></div>
-  <div class="feature"><span class="feature-icon">{{template "icon" "versions"}}</span><h3>Every push is a version</h3><p>Merge requests keep v1, v2, v3. Compare any two with range-diff.</p></div>
-  <div class="feature"><span class="feature-icon">{{template "icon" "shield-check"}}</span><h3>Verified pusher</h3><p>Commit pages show who actually pushed, next to the author the commit claims.</p>{{template "codebox" (dict "ID" "f-fetch" "Code" "git fetch origin '+refs/newgit/*:refs/newgit/*'")}}</div>
+  <div class="feature"><span class="feature-icon">{{template "icon" "versions"}}</span><h3>Every push is a version</h3><p>Merge requests keep v1, v2, v3. Compare any two with range-diff or an interdiff.</p></div>
+  <div class="feature"><span class="feature-icon">{{template "icon" "shield-check"}}</span><h3>Verified pusher</h3><p>Commit pages show who actually pushed, next to the author the commit claims.</p></div>
+  <div class="feature"><span class="feature-icon">{{template "icon" "database"}}</span><h3>Git is the database</h3><p>Issues, reviews and the push log are refs. One <code>git fetch</code> takes them with you.</p></div>
 </div>
 <div class="section-head" id="projects"><h2 class="section-title">Projects</h2></div>
 {{else}}

@@ -1,7 +1,7 @@
 {{define "crumbs"}}<li aria-current="page">Commits</li>{{end}}
 {{define "content"}}
 <div class="page-head"><div><h1 class="page-title">Commits</h1>{{with .Data.Path}}<p class="page-desc">History of <span class="mono">{{.}}</span></p>{{end}}</div></div>
-<div class="toolbar">{{template "refswitch" .}}<span class="spacer"></span>{{with .Data.Path}}<a class="btn sm ghost" href="/{{$.Repo.Path}}/-/commits/{{$.Repo.Ref}}">{{template "icon" "x"}}Clear path filter</a>{{end}}</div>
+<div class="toolbar">{{template "refswitch" .}}<span class="spacer"></span>{{with .Data.Path}}<a class="btn sm" href="/{{$.Repo.Path}}/-/commits/{{$.Repo.Ref}}">{{template "icon" "x"}}Clear path filter</a>{{end}}</div>
 {{if .Data.Commits}}
 <ul class="list card">
 {{$prev := ""}}{{range .Data.Commits}}{{$d := day .AuthorDate}}{{if ne $d $prev}}<li class="list-group">{{template "icon" "commit"}}Commits on {{$d}}</li>{{$prev = $d}}{{end}}
@@ -20,10 +20,10 @@
   </li>
 {{end}}
 </ul>
-<nav class="pager" aria-label="Pagination">
+{{if or (gt .Data.Page 1) .Data.More}}<nav class="pager" aria-label="Pagination">
   {{if gt .Data.Page 1}}<a class="btn sm" href="?page={{sub .Data.Page 1}}">{{template "icon" "chevron-left"}}Newer</a>{{end}}
   <span class="page-n">Page {{.Data.Page}}</span>
   {{if .Data.More}}<a class="btn sm" href="?page={{add .Data.Page 1}}">Older{{template "icon" "chevron-right"}}</a>{{end}}
-</nav>
+</nav>{{end}}
 {{else}}<div class="card">{{template "blank" (dict "Icon" "commit" "Title" "No commits here" "Text" "This branch or path has no history yet." "Class" "compact")}}</div>{{end}}
 {{end}}

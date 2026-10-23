@@ -16,7 +16,7 @@
     {{template "iconc" (dict "N" "file" "C" "i-muted")}}<span class="blob-name">{{$d.Name}}</span>
     <span class="blob-meta">{{if $d.Lines}}{{$d.Lines}} line{{if ne $d.Lines 1}}s{{end}}<span class="sep-dot"></span>{{end}}{{size $d.Size}}</span>
     <div class="blob-actions">
-      {{if $d.Markdown}}<a class="btn sm ghost" href="#source">{{template "icon" "code"}}Source</a>{{end}}
+      {{if $d.Markdown}}<a class="btn sm" href="#source">{{template "icon" "code"}}Source</a>{{end}}
       <div class="btn-group">
         <a class="btn sm" href="{{$raw}}">Raw</a>
         <a class="btn sm" href="/{{.Repo.Path}}/-/blob/{{$d.Commit}}/{{$d.Path}}" title="Link to this exact version">{{template "icon" "link"}}<span class="hide-sm">Permalink</span></a>

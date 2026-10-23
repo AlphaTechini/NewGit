@@ -9,7 +9,7 @@
     <a class="title mono" href="/{{$.Repo.Path}}/-/tree/{{.Name}}">{{.Name}}</a>{{if eq .Name $.Repo.Default}} <span class="pill outline">default</span>{{end}}
     <div class="meta"><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.Commit.OID}}">{{short .Commit.OID}}</a> {{.Commit.Subject}}<span class="sep-dot"></span>{{template "time" .Commit.CommitDate}}</div>
   </div>
-  {{if eq .Name $.Repo.Default}}<div class="ab-default hide-sm">Default</div>{{else}}
+  {{if eq .Name $.Repo.Default}}<div class="ab-default hide-sm" aria-hidden="true"></div>{{else}}
   <div class="ab hide-sm" title="{{.Behind}} behind, {{.Ahead}} ahead of {{$.Repo.Default}}"><div class="ab-side behind"><span>{{.Behind}}</span><span class="ab-bar"><i style="width:{{pct .Behind $max}}%"></i></span></div><div class="ab-side ahead"><span>{{.Ahead}}</span><span class="ab-bar"><i style="width:{{pct .Ahead $max}}%"></i></span></div></div>{{end}}
   <div class="end">
     {{$mr := index $.Data.MRs .Name}}
