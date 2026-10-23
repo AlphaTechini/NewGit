@@ -240,6 +240,51 @@ func CatBlob(ctx context.Context, gitDir, expr string) ([]byte, error) {
 	return Run(ctx, gitDir, nil, "cat-file", "blob", expr)
 }
 
+// CatBlobHead returns at most n leading bytes of a blob, without reading the
+// rest of it into memory.
+func CatBlobHead(ctx context.Context, gitDir, expr string, n int64) ([]byte, error) {
+	out, _, err := RunLimited(ctx, gitDir, n, "cat-file", "blob", "--end-of-options", expr)
+	return out, err
+}
+
+// RunLimited runs git and returns at most limit bytes of stdout. If git has
+// more output than that, it is killed as soon as limit+1 bytes have been read,
+// the result is cut to limit bytes and truncated is true. Errors from git are
+// reported only when the output was not truncated.
+func RunLimited(ctx context.Context, gitDir string, limit int64, args ...string) (out []byte, truncated bool, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	cmd := Cmd(ctx, gitDir, args...)
+	var errb bytes.Buffer
+	cmd.Stderr = &errb
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, false, err
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, false, err
+	}
+	out, rerr := io.ReadAll(io.LimitReader(stdout, limit+1))
+	if int64(len(out)) > limit {
+		out, truncated = out[:limit], true
+		_ = cmd.Process.Kill()
+	}
+	werr := cmd.Wait()
+	if truncated {
+		return out, true, nil
+	}
+	if rerr != nil {
+		return nil, false, rerr
+	}
+	if werr != nil {
+		return nil, false, &Error{Args: args, Stderr: errb.String(), Err: werr}
+	}
+	return out, false, nil
+}
+
 // ObjectSize returns the size of an object.
 func ObjectSize(ctx context.Context, gitDir, expr string) (int64, error) {
 	s, err := RunString(ctx, gitDir, "cat-file", "-s", expr)

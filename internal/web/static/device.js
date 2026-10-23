@@ -82,7 +82,7 @@
     var el = document.getElementById("ng-status");
     if (!el) return;
     el.textContent = text;
-    el.style.color = isError ? "#dd2b0e" : "";
+    el.classList.toggle("error", !!isError);
   }
 
   function nextURL() {
@@ -142,13 +142,49 @@
     });
   }
 
+  // Screen-reader announcement for copy feedback (one shared live region).
+  var live;
+  function announce(text) {
+    if (!live) {
+      live = document.createElement("div");
+      live.className = "sr-only";
+      live.setAttribute("role", "status");
+      live.setAttribute("aria-live", "polite");
+      document.body.appendChild(live);
+    }
+    live.textContent = "";
+    setTimeout(function () { live.textContent = text; }, 30);
+  }
+
+  // Copy feedback that never destroys a button's icon: a ".copy-label" child
+  // gets the text swap, a text-only button swaps its text, and an icon-only
+  // button just gets the "copied" class.
+  function showCopied(b) {
+    clearTimeout(b._ngCopyTimer);
+    var label = b.querySelector(".copy-label");
+    if (label) {
+      if (!label.hasAttribute("data-label")) label.setAttribute("data-label", label.textContent);
+      label.textContent = "Copied";
+    } else if (!b.children.length) {
+      if (!b.hasAttribute("data-label")) b.setAttribute("data-label", b.textContent);
+      b.textContent = "Copied";
+    }
+    b.classList.add("copied");
+    b._ngCopyTimer = setTimeout(function () {
+      if (label) label.textContent = label.getAttribute("data-label");
+      else if (b.hasAttribute("data-label")) b.textContent = b.getAttribute("data-label");
+      b.classList.remove("copied");
+    }, 1400);
+  }
+
   function wireCopyButtons() {
     document.querySelectorAll("[data-copy]").forEach(function (b) {
       b.addEventListener("click", function () {
         var target = document.getElementById(b.getAttribute("data-copy"));
         var text = target ? (target.value || target.textContent) : "";
         if (navigator.clipboard) navigator.clipboard.writeText(text.trim());
-        var old = b.textContent; b.textContent = "Copied"; setTimeout(function () { b.textContent = old; }, 1200);
+        showCopied(b);
+        announce("Copied to clipboard");
       });
     });
     document.querySelectorAll("form[data-signout]").forEach(function (f) {
@@ -159,8 +195,44 @@
     });
   }
 
+  // Progressive enhancement for <details class="dropdown"> menus: one open at
+  // a time, close on outside click and on Escape (focus returns to the summary).
+  function wireMenus() {
+    var menus = document.querySelectorAll("details.dropdown");
+    menus.forEach(function (d) {
+      d.addEventListener("toggle", function () {
+        if (!d.open) return;
+        menus.forEach(function (o) { if (o !== d && o.open) o.open = false; });
+      });
+    });
+    document.addEventListener("click", function (ev) {
+      menus.forEach(function (d) { if (d.open && !d.contains(ev.target)) d.open = false; });
+    });
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key !== "Escape") return;
+      menus.forEach(function (d) {
+        if (!d.open) return;
+        d.open = false;
+        var s = d.querySelector("summary");
+        if (s && d.contains(document.activeElement)) s.focus();
+      });
+    });
+  }
+
+  // Ctrl/Cmd+Enter submits the form a textarea belongs to.
+  function wireSubmitShortcut() {
+    document.addEventListener("keydown", function (ev) {
+      var t = ev.target;
+      if (ev.key !== "Enter" || !(ev.metaKey || ev.ctrlKey) || !t || t.tagName !== "TEXTAREA" || !t.form) return;
+      ev.preventDefault();
+      if (t.form.requestSubmit) t.form.requestSubmit(); else t.form.submit();
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     wireCopyButtons();
+    wireMenus();
+    wireSubmitShortcut();
     var signedIn = document.body.getAttribute("data-signed-in") === "1";
     if (!window.indexedDB || !window.crypto || !crypto.subtle) { initSigninPage(null); return; }
     loadKey().then(function (stored) {

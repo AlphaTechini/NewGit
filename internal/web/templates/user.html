@@ -1,5 +1,11 @@
 {{define "content"}}
-<div class="proj-head">{{template "avatar" (dict "Name" .Data.Profile.Username "Size" "lg")}}<div><h1>@{{.Data.Profile.Username}}</h1><div class="desc">Joined {{timeago .Data.Profile.Created}} · device-bound account</div></div></div>
-<h2>Projects</h2>
+<div class="proj-head">
+  {{template "avatar" (dict "Name" .Data.Profile.Username "Size" "xl")}}
+  <div class="grow"><h1>@{{.Data.Profile.Username}}</h1>
+    <p class="desc">Joined {{template "time" .Data.Profile.Created}}<span class="sep-dot"></span>Device-bound account</p>
+    <div class="stats"><span class="stat">{{template "icon" "files"}}<b>{{len .Data.Repos}}</b> project{{if ne (len .Data.Repos) 1}}s{{end}}</span></div></div>
+  {{if and .User (eq .User.Username .Data.Profile.Username)}}<div class="proj-actions"><a class="btn sm" href="/-/device">{{template "icon" "key"}}This device</a></div>{{end}}
+</div>
+<div class="section-head"><h2 class="section-title">Projects</h2></div>
 {{template "projectlist" .Data.Repos}}
 {{end}}

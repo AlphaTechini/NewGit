@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/AlphaTechini/newgit/internal/auth"
 	"github.com/AlphaTechini/newgit/internal/store"
@@ -27,7 +29,7 @@ func (s *Server) handleSignout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Auth.ClearSession(w)
-	http.Redirect(w, r, "/?signedout=1", http.StatusSeeOther)
+	http.Redirect(w, r, "/?flash=signed_out", http.StatusSeeOther)
 }
 
 func (s *Server) handleChallenge(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +150,7 @@ func (s *Server) handleCreateToken(w http.ResponseWriter, r *http.Request) {
 	// Show the token exactly once, via a short-lived HttpOnly cookie read by
 	// the next page load (so it never appears in a URL or the history).
 	http.SetCookie(w, &http.Cookie{Name: "ng_newtoken", Value: plain, Path: "/-/device", MaxAge: 120, HttpOnly: true, SameSite: http.SameSiteStrictMode})
-	http.Redirect(w, r, "/-/device", http.StatusSeeOther)
+	http.Redirect(w, r, "/-/device?flash=token_created", http.StatusSeeOther)
 }
 
 func (s *Server) handleRevokeToken(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +162,30 @@ func (s *Server) handleRevokeToken(w http.ResponseWriter, r *http.Request) {
 		s.storeError(w, r, err)
 		return
 	}
-	http.Redirect(w, r, "/-/device?flash=Token+revoked", http.StatusSeeOther)
+	http.Redirect(w, r, "/-/device?flash=token_revoked", http.StatusSeeOther)
+}
+
+// RepoCard is a repository as shown in lists (home, explore, user pages).
+type RepoCard struct {
+	store.Repo
+	LastActivity time.Time // newest push-log entry, else Created
+	OpenIssues   int
+	OpenMRs      int
+}
+
+// repoCards decorates repos with activity and counts, newest activity first.
+func (s *Server) repoCards(repos []store.Repo) []RepoCard {
+	cards := make([]RepoCard, 0, len(repos))
+	for _, r := range repos {
+		c := RepoCard{Repo: r, LastActivity: r.Created}
+		if ps := s.Store.RecentPushes(r.ID, 1); len(ps) > 0 && ps[0].At.After(c.LastActivity) {
+			c.LastActivity = ps[0].At
+		}
+		c.OpenIssues, c.OpenMRs = s.Store.CountOpen(r.ID)
+		cards = append(cards, c)
+	}
+	sort.SliceStable(cards, func(i, j int) bool { return cards[i].LastActivity.After(cards[j].LastActivity) })
+	return cards
 }
 
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
@@ -170,13 +195,13 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, r, "home.html", &Page{Title: "Projects", Nav: "home", Data: map[string]any{
-		"Mine": s.Store.ListRepos(u.ID), "All": s.Store.ListRepos(""),
+		"Mine": s.repoCards(s.Store.ListRepos(u.ID)), "All": s.repoCards(s.Store.ListRepos("")),
 	}})
 }
 
 func (s *Server) handleExplore(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "explore.html", &Page{Title: "Explore projects", Nav: "explore", Data: map[string]any{
-		"All": s.Store.ListRepos(""),
+		"All": s.repoCards(s.Store.ListRepos("")),
 	}})
 }
 
@@ -186,7 +211,7 @@ func (s *Server) handleUserPage(w http.ResponseWriter, r *http.Request, name str
 		s.errorPage(w, r, 404, "User not found.")
 		return
 	}
-	s.render(w, r, "user.html", &Page{Title: u.Username, Data: map[string]any{"Profile": u, "Repos": s.Store.ListRepos(u.ID)}})
+	s.render(w, r, "user.html", &Page{Title: u.Username, Data: map[string]any{"Profile": u, "Repos": s.repoCards(s.Store.ListRepos(u.ID))}})
 }
 
 func (s *Server) handleNewRepo(w http.ResponseWriter, r *http.Request) {
@@ -219,7 +244,7 @@ func (s *Server) handleNewRepo(w http.ResponseWriter, r *http.Request) {
 		}
 		_, _ = s.Store.CommitFiles(r.Context(), repo.ID, *u, "web", "main", "", "Initial commit", []store.FileChange{{Path: "README.md", Content: content}})
 	}
-	http.Redirect(w, r, "/"+repo.Path(), http.StatusSeeOther)
+	http.Redirect(w, r, "/"+repo.Path()+"?flash=created", http.StatusSeeOther)
 }
 
 func (s *Server) handleRepoSettings(w http.ResponseWriter, r *http.Request, repo store.Repo) {

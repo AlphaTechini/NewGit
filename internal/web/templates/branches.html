@@ -1,22 +1,22 @@
-{{define "crumbs"}}<span class="sep">/</span><span>Branches</span>{{end}}
+{{define "crumbs"}}<li aria-current="page">Branches</li>{{end}}
 {{define "content"}}
-<h1>Branches</h1>
-<ul class="list card">
-{{range .Data.Branches}}
-  <li>
-    <div class="grow">
-      <a class="title mono" href="/{{$.Repo.Path}}/-/tree/{{.Name}}">{{.Name}}</a>
-      {{if eq .Name $.Repo.Default}}<span class="pill neutral">default</span>{{end}}
-      <div class="meta"><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.Commit.OID}}">{{short .Commit.OID}}</a> {{.Commit.Subject}} · {{timeago .Commit.CommitDate}}</div>
-    </div>
-    {{if ne .Name $.Repo.Default}}<span class="meta nowrap" title="commits ahead / behind {{$.Repo.Default}}">{{.Ahead}} ahead · {{.Behind}} behind</span>{{end}}
+<div class="page-head"><div><h1 class="page-title">Branches</h1><p class="page-desc">Ahead and behind are counted against <span class="ref">{{.Repo.Default}}</span>.</p></div></div>
+{{$max := 1}}{{range .Data.Branches}}{{if gt .Ahead $max}}{{$max = .Ahead}}{{end}}{{if gt .Behind $max}}{{$max = .Behind}}{{end}}{{end}}
+<ul class="list card dense">
+{{range .Data.Branches}}<li>
+  {{template "iconc" (dict "N" "branch" "C" "list-icon")}}
+  <div class="grow">
+    <a class="title mono" href="/{{$.Repo.Path}}/-/tree/{{.Name}}">{{.Name}}</a>{{if eq .Name $.Repo.Default}} <span class="pill outline">default</span>{{end}}
+    <div class="meta"><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.Commit.OID}}">{{short .Commit.OID}}</a> {{.Commit.Subject}}<span class="sep-dot"></span>{{template "time" .Commit.CommitDate}}</div>
+  </div>
+  {{if eq .Name $.Repo.Default}}<div class="ab-default hide-sm" aria-hidden="true"></div>{{else}}
+  <div class="ab hide-sm" title="{{.Behind}} behind, {{.Ahead}} ahead of {{$.Repo.Default}}"><div class="ab-side behind"><span>{{.Behind}}</span><span class="ab-bar"><i style="width:{{pct .Behind $max}}%"></i></span></div><div class="ab-side ahead"><span>{{.Ahead}}</span><span class="ab-bar"><i style="width:{{pct .Ahead $max}}%"></i></span></div></div>{{end}}
+  <div class="end">
     {{$mr := index $.Data.MRs .Name}}
-    {{if $mr}}<a class="btn sm" href="/{{$.Repo.Path}}/-/merge_requests/{{$mr}}">!{{$mr}}</a>
-    {{else if and $.Repo.CanWrite (ne .Name $.Repo.Default) (gt .Ahead 0)}}<a class="btn sm" href="/{{$.Repo.Path}}/-/merge_requests/new?source={{.Name}}">Merge request</a>{{end}}
-    <a class="btn sm" href="/{{$.Repo.Path}}/-/commits/{{.Name}}">Commits</a>
-  </li>
-{{else}}
-  <li class="muted">No branches yet.</li>
-{{end}}
+    {{if $mr}}<a class="btn sm" href="/{{$.Repo.Path}}/-/merge_requests/{{$mr}}">{{template "iconc" (dict "N" "mr" "C" "i-open")}}!{{$mr}}</a>
+    {{else if and $.Repo.CanWrite (ne .Name $.Repo.Default) (gt .Ahead 0)}}<a class="btn sm" href="/{{$.Repo.Path}}/-/merge_requests/new?source={{.Name}}">{{template "icon" "mr"}}New merge request</a>{{end}}
+    <a class="btn sm ghost icon" href="/{{$.Repo.Path}}/-/commits/{{.Name}}" aria-label="Commits on {{.Name}}" title="Commits">{{template "icon" "history"}}</a>
+  </div>
+</li>{{end}}
 </ul>
 {{end}}

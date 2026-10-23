@@ -275,3 +275,60 @@ func RangeDiff(ctx context.Context, gitDir, base1, tip1, base2, tip2 string) (st
 	out, err := Run(ctx, gitDir, nil, "range-diff", "--no-color", base1+".."+tip1, base2+".."+tip2)
 	return string(out), err
 }
+
+// TagInfo is a tag with the commit it points at.
+type TagInfo struct {
+	Name    string
+	OID     string // commit the tag points at (annotated tags are peeled)
+	Subject string // tag message subject (annotated) or commit subject (lightweight)
+	Date    time.Time
+}
+
+// ListTags lists tags, newest first by creator date.
+func ListTags(ctx context.Context, gitDir string) ([]TagInfo, error) {
+	out, err := Run(ctx, gitDir, nil, "for-each-ref", "--sort=-creatordate",
+		"--format=%(refname:strip=2)%00%(objectname)%00%(*objectname)%00%(contents:subject)%00%(creatordate:unix)", "refs/tags/")
+	if err != nil {
+		return nil, err
+	}
+	var tags []TagInfo
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == "" {
+			continue
+		}
+		f := strings.Split(line, "\x00")
+		if len(f) < 5 {
+			continue
+		}
+		oid := f[1]
+		if f[2] != "" {
+			oid = f[2]
+		}
+		ct, _ := strconv.ParseInt(f[4], 10, 64)
+		tags = append(tags, TagInfo{Name: f[0], OID: oid, Subject: f[3], Date: time.Unix(ct, 0)})
+	}
+	return tags, nil
+}
+
+// CountCommits counts commits in a rev-list expression list (e.g. "main", or
+// "head", "^base"). Returns 0 and an error when a revision does not resolve.
+func CountCommits(ctx context.Context, gitDir string, revs ...string) (int, error) {
+	args := append([]string{"rev-list", "--count", "--end-of-options"}, revs...)
+	out, err := RunString(ctx, gitDir, args...)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := strconv.Atoi(strings.TrimSpace(out))
+	return n, nil
+}
+
+// LogRangeLimit is like LogRange but returns at most limit of the newest
+// commits (still ordered oldest first).
+func LogRangeLimit(ctx context.Context, gitDir string, limit int, revs ...string) ([]Commit, error) {
+	args := append([]string{"log", "--reverse", "-n", strconv.Itoa(limit), "--format=" + logFormat, "--end-of-options"}, revs...)
+	out, err := Run(ctx, gitDir, nil, args...)
+	if err != nil {
+		return nil, err
+	}
+	return parseLog(out), nil
+}

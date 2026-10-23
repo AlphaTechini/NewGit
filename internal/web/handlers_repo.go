@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"unicode/utf8"
@@ -19,6 +20,33 @@ func isBinary(b []byte) bool {
 		n = 8000
 	}
 	return bytes.IndexByte(b[:n], 0) >= 0 || !utf8.Valid(b[:n])
+}
+
+// imageTypes maps file extensions to the only image content types ever served
+// inline. SVG is deliberately absent: it can carry script.
+var imageTypes = map[string]string{
+	".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+	".gif": "image/gif", ".webp": "image/webp",
+}
+
+const maxRawImage = 50 << 20
+
+// sniffImage returns the content type when both the extension and the
+// content say this is a raster image we serve inline.
+func sniffImage(name string, b []byte) (string, bool) {
+	want, ok := imageTypes[strings.ToLower(path.Ext(name))]
+	if !ok {
+		return "", false
+	}
+	n := len(b)
+	if n > 512 {
+		n = 512
+	}
+	got := http.DetectContentType(b[:n])
+	if got != want {
+		return "", false
+	}
+	return got, true
 }
 
 func readmeOf(entries []gitx.TreeEntry) string {
@@ -61,7 +89,7 @@ func (s *Server) treeData(r *http.Request, repo store.Repo, commit, p string) (*
 		if b, err := gitx.CatBlob(ctx, repo.Dir, commit+":"+rp); err == nil && len(b) < maxBlobDisplay {
 			td.Readme = rp
 			if strings.HasSuffix(strings.ToLower(rp), ".md") || strings.HasSuffix(strings.ToLower(rp), ".markdown") {
-				td.ReadmeHTML = renderMarkdown(string(b))
+				td.ReadmeHTML = renderMarkdownDoc(string(b))
 			} else {
 				td.ReadmeHTML = string(b)
 			}
@@ -157,9 +185,13 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request, repo store.R
 			s.storeError(w, r, err)
 			return
 		}
-		// Always serve as plain text / octet-stream so repository content can
-		// never run as HTML on our origin.
-		if isBinary(b) {
+		// Repository content can never run as HTML on our origin: it is served
+		// as plain text, octet-stream, or (verified png/jpeg/gif/webp only) an
+		// inline image. SVG is never served as an image.
+		if ct, ok := sniffImage(p, b); ok {
+			w.Header().Set("Content-Type", ct)
+			w.Header().Set("Content-Disposition", "inline")
+		} else if isBinary(b) {
 			w.Header().Set("Content-Type", "application/octet-stream")
 			w.Header().Set("Content-Disposition", `attachment; filename="`+strings.ReplaceAll(path.Base(p), `"`, "")+`"`)
 		} else {
@@ -170,8 +202,18 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request, repo store.R
 		_, _ = w.Write(b)
 		return
 	}
-	data := map[string]any{"Path": p, "Commit": commit, "Size": size, "Name": path.Base(p)}
-	if size > maxBlobDisplay {
+	data := map[string]any{"Path": p, "Commit": commit, "Size": size, "Name": path.Base(p), "IsImage": false, "RawURL": ""}
+	isImage := false
+	if _, ext := imageTypes[strings.ToLower(path.Ext(p))]; ext && size <= maxRawImage {
+		// sniffImage looks at 512 bytes at most, so read no more than that.
+		if b, err := gitx.CatBlobHead(ctx, repo.Dir, commit+":"+p, 512); err == nil {
+			_, isImage = sniffImage(p, b)
+		}
+	}
+	if isImage {
+		u := url.URL{Path: "/" + repo.Path() + "/-/raw/" + ref + "/" + p}
+		data["IsImage"], data["RawURL"] = true, u.EscapedPath()
+	} else if size > maxBlobDisplay {
 		data["TooLarge"] = true
 	} else {
 		b, err := gitx.CatBlob(ctx, repo.Dir, commit+":"+p)
@@ -184,7 +226,7 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request, repo store.R
 		} else {
 			lower := strings.ToLower(p)
 			if strings.HasSuffix(lower, ".md") || strings.HasSuffix(lower, ".markdown") {
-				data["Markdown"] = renderMarkdown(string(b))
+				data["Markdown"] = renderMarkdownDoc(string(b))
 			}
 			data["Highlighted"] = highlight(p, string(b))
 			data["Lines"] = strings.Count(string(b), "\n")
@@ -303,6 +345,19 @@ func (s *Server) handleBranches(w http.ResponseWriter, r *http.Request, repo sto
 		}
 	}
 	s.render(w, r, "branches.html", &Page{Title: "Branches · " + repo.Path(), Repo: rc, Nav: "branches", Data: map[string]any{"Branches": bs, "MRs": mrBySource}})
+}
+
+func (s *Server) handleTags(w http.ResponseWriter, r *http.Request, repo store.Repo) {
+	rc := s.repoCtx(r, repo, "")
+	tags, err := gitx.ListTags(r.Context(), repo.Dir)
+	if err != nil {
+		s.storeError(w, r, err)
+		return
+	}
+	if tags == nil {
+		tags = []gitx.TagInfo{}
+	}
+	s.render(w, r, "tags.html", &Page{Title: "Tags · " + repo.Path(), Repo: rc, Nav: "tags", Data: map[string]any{"Tags": tags}})
 }
 
 func (s *Server) handlePushes(w http.ResponseWriter, r *http.Request, repo store.Repo) {

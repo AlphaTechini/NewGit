@@ -1,106 +1,278 @@
-{{define "avatar"}}<span class="avatar {{.Size}}{{if .Square}} sq{{end}}" style="background:hsl({{hue .Name}},45%,48%)" aria-hidden="true">{{initials .Name}}</span>{{end}}
+{{/* ======================================================================
+     NewGit partials. Argument shapes are documented above each define.
+     Icons come from the sprite at /-/static/icons.svg (see "icon").
+     ====================================================================== */}}
 
-{{define "icon-folder"}}<svg class="ico" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1.5 3A1.5 1.5 0 0 1 3 1.5h3.1l1.5 1.5H13A1.5 1.5 0 0 1 14.5 4.5v8A1.5 1.5 0 0 1 13 14H3a1.5 1.5 0 0 1-1.5-1.5V3z"/></svg>{{end}}
-{{define "icon-file"}}<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M3.5 1.5h6l3 3v10h-9z"/><path d="M9.5 1.5v3h3"/></svg>{{end}}
+{{/* icon: string name from icons.svg. 16px, decorative. */}}
+{{define "icon"}}<svg class="i" aria-hidden="true"><use href="/-/static/icons.svg#{{.}}"></use></svg>{{end}}
 
-{{define "projectlist"}}
-{{if .}}
-<ul class="list card">
-{{range .}}
-  <li>
+{{/* iconc: dict "N" name, "C" extra classes (e.g. "sm i-open", "chev"). */}}
+{{define "iconc"}}<svg class="i {{.C}}" aria-hidden="true"><use href="/-/static/icons.svg#{{.N}}"></use></svg>{{end}}
+
+{{define "logo"}}<svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><use href="/-/static/icons.svg#logo"></use></svg>{{end}}
+
+{{/* legacy names kept for page templates */}}
+{{define "icon-folder"}}<svg class="i i-folder" aria-hidden="true"><use href="/-/static/icons.svg#folder"></use></svg>{{end}}
+{{define "icon-file"}}<svg class="i" aria-hidden="true"><use href="/-/static/icons.svg#file"></use></svg>{{end}}
+
+{{/* avatar: dict "Name" string, "Size" ""(24)|"xs"(16)|"sm"(20)|"md"(32)|"lg"(48)|"xl"(64), "Square" bool (repos).
+     Colour is derived from --h; contrast is AA in both themes. Decorative: always pair with a visible name. */}}
+{{define "avatar"}}<span class="avatar{{with .Size}} {{.}}{{end}}{{if .Square}} sq{{end}}" style="--h:{{hue .Name}}" aria-hidden="true">{{initials .Name}}</span>{{end}}
+
+{{/* time: time.Time. Relative text, absolute UTC in the tooltip. */}}
+{{define "time"}}<time datetime="{{iso .}}" title="{{datetime .}}">{{timeago .}}</time>{{end}}
+
+{{/* copybtn: string id of the element whose value/text is copied (device.js). */}}
+{{define "copybtn"}}<button class="btn xs copy" type="button" data-copy="{{.}}">{{template "icon" "copy"}}<span class="copy-label">Copy</span></button>{{end}}
+
+{{/* codebox: dict "ID" unique element id, "Code" string. A copyable command block. */}}
+{{define "codebox"}}<div class="code-wrap"><pre class="codebox" id="{{.ID}}">{{.Code}}</pre>{{template "copybtn" .ID}}</div>{{end}}
+
+{{/* blank (empty state): dict "Icon" sprite name, "Title", "Text", optional "Href"+"Action" (primary button),
+     optional "Tone" ("accent"|"open"), optional "Class" ("compact"). For richer actions write the markup by hand (see spec). */}}
+{{define "blank"}}<div class="blank{{with .Class}} {{.}}{{end}}">
+  <div class="blank-art{{with .Tone}} {{.}}{{end}}" aria-hidden="true">{{template "icon" .Icon}}</div>
+  <h2 class="blank-title">{{.Title}}</h2>
+  {{with .Text}}<p class="blank-text">{{.}}</p>{{end}}
+  {{if .Href}}<div class="blank-actions"><a class="btn primary" href="{{.Href}}">{{.Action}}</a></div>{{end}}
+</div>{{end}}
+
+{{/* statepill: dict "Kind" "mr"|"issue", "State" opened|merged|closed, optional "Small" bool (tinted 20px instead of solid 28px).
+     A merged MR renders class="pill merged ..." (smoke-test contract). */}}
+{{define "statepill"}}{{$solid := not .Small}}{{if eq .Kind "mr"}}{{if eq .State "merged"}}<span class="pill merged{{if $solid}} solid{{end}}">{{template "icon" "merge"}}Merged</span>{{else if eq .State "closed"}}<span class="pill closed{{if $solid}} solid{{end}}">{{template "icon" "mr-closed"}}Closed</span>{{else}}<span class="pill opened{{if $solid}} solid{{end}}">{{template "icon" "mr"}}Open</span>{{end}}{{else}}{{if eq .State "closed"}}<span class="pill done{{if $solid}} solid{{end}}">{{template "icon" "issue-closed"}}Closed</span>{{else}}<span class="pill opened{{if $solid}} solid{{end}}">{{template "icon" "issue"}}Open</span>{{end}}{{end}}{{end}}
+
+{{/* stateicon: same dict as statepill; a coloured 16px list icon with screen-reader text. */}}
+{{define "stateicon"}}{{if eq .Kind "mr"}}{{if eq .State "merged"}}{{template "iconc" (dict "N" "merge" "C" "list-icon i-merged")}}<span class="sr-only">Merged:</span>{{else if eq .State "closed"}}{{template "iconc" (dict "N" "mr-closed" "C" "list-icon i-closed")}}<span class="sr-only">Closed:</span>{{else}}{{template "iconc" (dict "N" "mr" "C" "list-icon i-open")}}<span class="sr-only">Open:</span>{{end}}{{else}}{{if eq .State "closed"}}{{template "iconc" (dict "N" "issue-closed" "C" "list-icon i-merged")}}<span class="sr-only">Closed:</span>{{else}}{{template "iconc" (dict "N" "issue" "C" "list-icon i-open")}}<span class="sr-only">Open:</span>{{end}}{{end}}{{end}}
+
+{{/* pusher: *store.Push or store.Push or nil. Verified badge with the literal text "✓ @user". */}}
+{{define "pusher"}}{{if .}}<span class="verified" title="Verified pusher: @{{.By}} pushed this through an authenticated {{.Via}} push. The author line is whatever the commit claims.">✓ @{{.By}}</span>{{else}}<span class="unverified" title="No push-log entry for this commit, for example history imported before NewGit recorded pushes.">Pusher unknown</span>{{end}}{{end}}
+
+{{/* dbar: dict "A" additions, "D" deletions, optional "Lg" bool. Proportional add/delete bar. */}}
+{{define "dbar"}}{{$t := add .A .D}}<span class="dbar{{if .Lg}} lg{{end}}" aria-hidden="true">{{if $t}}<span class="a" style="width:{{pct .A $t}}%"></span><span class="d" style="width:{{pct .D $t}}%"></span>{{end}}</span>{{end}}
+
+{{/* ------------------------------------------------------------ chrome */}}
+
+{{/* thememenu: *Page. No-JS theme switch: POST /-/theme. */}}
+{{define "thememenu"}}<details class="dropdown theme-menu">
+  <summary class="btn ghost sm icon" title="Theme" aria-label="Theme: {{if eq .Theme "dark"}}dark{{else if eq .Theme "light"}}light{{else}}system{{end}}">{{if eq .Theme "dark"}}{{template "icon" "moon"}}{{else if eq .Theme "light"}}{{template "icon" "sun"}}{{else}}{{template "icon" "monitor"}}{{end}}</summary>
+  <form class="menu" method="post" action="/-/theme">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="next" value="{{.Path}}">
+    <div class="menu-label">Theme</div>
+    <button class="menu-item" type="submit" name="theme" value="system" aria-pressed="{{if .Theme}}false{{else}}true{{end}}">{{template "icon" "monitor"}}System<span class="end">{{template "iconc" (dict "N" "check" "C" "check")}}</span></button>
+    <button class="menu-item" type="submit" name="theme" value="light" aria-pressed="{{if eq .Theme "light"}}true{{else}}false{{end}}">{{template "icon" "sun"}}Light<span class="end">{{template "iconc" (dict "N" "check" "C" "check")}}</span></button>
+    <button class="menu-item" type="submit" name="theme" value="dark" aria-pressed="{{if eq .Theme "dark"}}true{{else}}false{{end}}">{{template "icon" "moon"}}Dark<span class="end">{{template "iconc" (dict "N" "check" "C" "check")}}</span></button>
+  </form>
+</details>{{end}}
+
+{{/* usermenu: *Page (signed in). Holds the sign-out form (data-signout + csrf). */}}
+{{define "usermenu"}}<details class="dropdown usermenu">
+  <summary aria-label="Account menu for @{{.User.Username}}">{{template "avatar" (dict "Name" .User.Username "Size" "")}}</summary>
+  <div class="menu">
+    <div class="menu-head">{{template "avatar" (dict "Name" .User.Username "Size" "md")}}<div class="who"><b>@{{.User.Username}}</b><span>Signed in with this device</span></div></div>
+    <div class="menu-sep"></div>
+    <a class="menu-item" href="/{{.User.Username}}">{{template "icon" "user"}}Your profile</a>
+    <a class="menu-item" href="/">{{template "icon" "files"}}Your projects</a>
+    <a class="menu-item" href="/-/device">{{template "icon" "key"}}This device and tokens</a>
+    <a class="menu-item" href="/-/new">{{template "icon" "plus"}}New project</a>
+    <div class="menu-sep"></div>
+    <form method="post" action="/-/signout" data-signout><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="menu-item" type="submit">{{template "icon" "log-out"}}Sign out</button></form>
+  </div>
+</details>{{end}}
+
+{{/* navitem: dict "Href", "Icon", "Label", "On" bool, optional "Count" int (hidden when 0), "CountLabel" (screen readers). */}}
+{{define "navitem"}}<a class="nav-item" href="{{.Href}}"{{if .On}} aria-current="page"{{end}}>{{template "icon" .Icon}}<span>{{.Label}}</span>{{with .Count}}<span class="count">{{.}}<span class="sr-only"> {{$.CountLabel}}</span></span>{{end}}</a>{{end}}
+
+{{/* sidebar: *Page with .Repo. On phones it becomes a horizontal scrolling strip (CSS only). */}}
+{{define "sidebar"}}{{$p := .Repo.Path}}<nav class="sidebar" aria-label="Project">
+  <a class="nav-proj" href="/{{$p}}">{{template "avatar" (dict "Name" .Repo.Name "Size" "md" "Square" true)}}<span class="nav-proj-text"><span class="nav-proj-name">{{.Repo.Name}}</span><span class="nav-proj-owner">{{.Repo.Owner}}</span></span></a>
+  {{template "navitem" (dict "Href" (printf "/%s" $p) "Icon" "home" "Label" "Overview" "On" (eq .Nav "overview"))}}
+  <div class="nav-label">Code</div>
+  {{template "navitem" (dict "Href" (printf "/%s/-/tree/%s" $p .Repo.Ref) "Icon" "code" "Label" "Files" "On" (eq .Nav "files"))}}
+  {{template "navitem" (dict "Href" (printf "/%s/-/commits/%s" $p .Repo.Ref) "Icon" "commit" "Label" "Commits" "On" (eq .Nav "commits"))}}
+  {{template "navitem" (dict "Href" (printf "/%s/-/branches" $p) "Icon" "branch" "Label" "Branches" "On" (eq .Nav "branches") "Count" .Repo.BranchCount "CountLabel" "branches")}}
+  {{template "navitem" (dict "Href" (printf "/%s/-/tags" $p) "Icon" "tag" "Label" "Tags" "On" (eq .Nav "tags") "Count" .Repo.TagCount "CountLabel" "tags")}}
+  {{template "navitem" (dict "Href" (printf "/%s/-/pushes" $p) "Icon" "push" "Label" "Push log" "On" (eq .Nav "pushes"))}}
+  <div class="nav-label">Collaborate</div>
+  {{template "navitem" (dict "Href" (printf "/%s/-/merge_requests" $p) "Icon" "mr" "Label" "Merge requests" "On" (eq .Nav "mrs") "Count" .Repo.OpenMRs "CountLabel" "open")}}
+  {{template "navitem" (dict "Href" (printf "/%s/-/issues" $p) "Icon" "issue" "Label" "Issues" "On" (eq .Nav "issues") "Count" .Repo.OpenIssues "CountLabel" "open")}}
+</nav>{{end}}
+
+{{/* clonemenu: *Page with .Repo. Shown in the panel header of every repo page. Element ids: cloneurl, clone-agit, clone-fetch. */}}
+{{define "clonemenu"}}<details class="dropdown clonemenu">
+  <summary class="btn sm">{{template "icon" "code"}}<span>Clone</span>{{template "iconc" (dict "N" "chevron-down" "C" "chev")}}</summary>
+  <div class="menu wide pad">
+    <div class="menu-section">
+      <label class="label" for="cloneurl">{{template "icon" "globe"}}Clone with HTTPS</label>
+      <div class="clone"><input type="text" readonly id="cloneurl" value="{{.Repo.CloneURL}}"><button class="btn sm copy" type="button" data-copy="cloneurl">{{template "icon" "copy"}}<span class="copy-label">Copy</span></button></div>
+      <p class="hint">Anyone can clone. To push, use a token from <a href="/-/device">This device</a> as the password.</p>
+    </div>
+    <div class="menu-section">
+      <div class="label">{{template "icon" "mr"}}Propose a change, no fork needed</div>
+      {{template "codebox" (dict "ID" "clone-agit" "Code" (printf "git push origin HEAD:refs/for/%s -o title=\"My change\"" .Repo.Default))}}
+      <p class="hint">Opens a merge request. Push again with <code>-o topic=&lt;topic&gt;</code> to add a version.</p>
+    </div>
+    <div class="menu-section">
+      <div class="label">{{template "icon" "database"}}Fetch issues and review history</div>
+      {{template "codebox" (dict "ID" "clone-fetch" "Code" "git fetch origin '+refs/newgit/*:refs/newgit/*'")}}
+    </div>
+  </div>
+</details>{{end}}
+
+{{/* ------------------------------------------------------------ repo */}}
+
+{{/* projhead: *Page with .Repo. Overview header: name, description, stats, primary actions. */}}
+{{define "projhead"}}{{$p := .Repo.Path}}<div class="proj-head">
+  {{template "avatar" (dict "Name" .Repo.Name "Size" "lg" "Square" true)}}
+  <div class="grow">
+    <h1>{{.Repo.Name}}</h1>
+    {{if .Repo.Description}}<p class="desc">{{.Repo.Description}}</p>{{end}}
+    {{if not .Repo.Empty}}<div class="stats">
+      <a class="stat" href="/{{$p}}/-/commits/{{.Repo.Default}}">{{template "icon" "commit"}}<b>{{.Repo.CommitCount}}</b> commit{{if ne .Repo.CommitCount 1}}s{{end}}</a>
+      <a class="stat" href="/{{$p}}/-/branches">{{template "icon" "branch"}}<b>{{.Repo.BranchCount}}</b> branch{{if ne .Repo.BranchCount 1}}es{{end}}</a>
+      <a class="stat" href="/{{$p}}/-/tags">{{template "icon" "tag"}}<b>{{.Repo.TagCount}}</b> tag{{if ne .Repo.TagCount 1}}s{{end}}</a>
+      <a class="stat" href="/{{$p}}/-/merge_requests">{{template "icon" "mr"}}<b>{{.Repo.OpenMRs}}</b> open merge request{{if ne .Repo.OpenMRs 1}}s{{end}}</a>
+      <a class="stat" href="/{{$p}}/-/issues">{{template "icon" "issue"}}<b>{{.Repo.OpenIssues}}</b> open issue{{if ne .Repo.OpenIssues 1}}s{{end}}</a>
+    </div>{{end}}
+  </div>
+  {{if .User}}<div class="proj-actions"><a class="btn sm" href="/{{$p}}/-/issues/new">{{template "icon" "issue"}}New issue</a></div>{{end}}
+</div>{{end}}
+
+{{/* refswitch: *Page with .Repo. Branches and Tags tabs (radio inputs, no JS).
+     Links keep the page kind: commits page -> /-/commits/<ref>[/path], blob -> /-/blob/<ref>/<path>, otherwise /-/tree/<ref>[/path].
+     One per page (fixed ids rs-b / rs-t). */}}
+{{define "refswitch"}}{{$r := .Repo}}{{$kind := "tree"}}{{$path := ""}}{{if eq .Nav "commits"}}{{$kind = "commits"}}{{with .Data}}{{$path = .Path}}{{end}}{{else if .Data}}{{if .Data.Tree}}{{$path = .Data.Tree.Path}}{{else if .Data.Path}}{{$kind = "blob"}}{{$path = .Data.Path}}{{end}}{{end}}<details class="dropdown refswitch">
+  <summary class="btn sm refbtn{{if eq $r.RefKind "commit"}} detached{{end}}" title="Switch branch or tag">{{if eq $r.RefKind "tag"}}{{template "icon" "tag"}}{{else if eq $r.RefKind "commit"}}{{template "icon" "commit"}}{{else}}{{template "icon" "branch"}}{{end}}<span class="sr-only">Current {{$r.RefKind}}: </span><span class="ref-name">{{if eq $r.RefKind "commit"}}{{short $r.Ref}}{{else}}{{$r.Ref}}{{end}}</span>{{template "iconc" (dict "N" "chevron-down" "C" "chev")}}</summary>
+  <div class="menu left refmenu">
+    <input class="rs-radio" type="radio" name="rs" id="rs-b"{{if ne $r.RefKind "tag"}} checked{{end}}>
+    <input class="rs-radio" type="radio" name="rs" id="rs-t"{{if eq $r.RefKind "tag"}} checked{{end}}>
+    <div class="rs-tabs"><label for="rs-b">Branches <span class="count">{{len $r.Branches}}</span></label><label for="rs-t">Tags <span class="count">{{len $r.Tags}}</span></label></div>
+    {{if eq $r.RefKind "commit"}}<div class="menu-empty">Viewing commit <span class="sha">{{short $r.Ref}}</span>. Pick a branch or tag to follow it.</div>{{end}}
+    <div class="rs-pane rs-pane-b"><div class="menu-scroll">
+      {{range $r.Branches}}<a class="menu-item" href="/{{$r.Path}}/-/{{$kind}}/{{.}}{{with $path}}/{{.}}{{end}}"{{if eq . $r.Ref}} aria-current="true"{{end}}>{{template "iconc" (dict "N" "check" "C" "check")}}<span class="mono">{{.}}</span>{{if eq . $r.Default}}<span class="end"><span class="pill outline">default</span></span>{{end}}</a>{{else}}<div class="menu-empty">No branches yet.</div>{{end}}
+    </div></div>
+    <div class="rs-pane rs-pane-t"><div class="menu-scroll">
+      {{range $r.Tags}}<a class="menu-item" href="/{{$r.Path}}/-/{{$kind}}/{{.}}{{with $path}}/{{.}}{{end}}"{{if eq . $r.Ref}} aria-current="true"{{end}}>{{template "iconc" (dict "N" "check" "C" "check")}}<span class="mono">{{.}}</span></a>{{else}}<div class="menu-empty">No tags yet. Push one with <code>git push origin v1.0</code>.</div>{{end}}
+    </div></div>
+    <div class="rs-foot"><a class="menu-item" href="/{{$r.Path}}/-/branches">{{template "icon" "branch"}}View all branches</a><a class="menu-item" href="/{{$r.Path}}/-/tags">{{template "icon" "tag"}}View all tags</a></div>
+  </div>
+</details>{{end}}
+
+{{/* filetable: dict "Tree" *treeData, "RepoPath", "Ref", "Parent" (parent dir path, "" at root).
+     Card with the last-commit bar (author, subject, verified pusher, sha, time, History) and the file rows. */}}
+{{define "filetable"}}{{$rp := .RepoPath}}{{$ref := .Ref}}{{$tree := .Tree}}<div class="card files-card">
+  {{with $tree.LastCommit}}{{if .OID}}<div class="lastcommit">
+    {{template "avatar" (dict "Name" .AuthorName "Size" "sm")}}
+    <div class="grow"><span class="strong nowrap">{{.AuthorName}}</span><a class="lc-subject" href="/{{$rp}}/-/commit/{{.OID}}" title="{{.Subject}}">{{.Subject}}</a></div>
+    <div class="lc-end">
+      <span class="hide-sm">{{template "pusher" $tree.Pusher}}</span>
+      <a class="sha" href="/{{$rp}}/-/commit/{{.OID}}" aria-label="Commit {{short .OID}}">{{short .OID}}</a>
+      <span class="lc-meta">{{template "time" .AuthorDate}}</span>
+    </div>
+  </div>{{end}}{{end}}
+  <table class="files">
+    <caption class="sr-only">Files in {{with $tree.Path}}{{.}}{{else}}the repository root{{end}}</caption>
+    <thead class="sr-only"><tr><th scope="col">Name</th><th scope="col">Size</th></tr></thead>
+    <tbody>
+    {{if not $tree.IsRoot}}<tr><td class="name up" colspan="2"><a href="/{{$rp}}/-/tree/{{$ref}}{{with $.Parent}}/{{.}}{{end}}">{{template "iconc" (dict "N" "folder" "C" "i-folder")}}<span>..</span><span class="sr-only"> (parent directory)</span></a></td></tr>{{end}}
+    {{range $tree.Entries}}<tr>
+      <td class="name">{{if eq .Type "tree"}}<a href="/{{$rp}}/-/tree/{{$ref}}/{{.Path}}">{{template "iconc" (dict "N" "folder" "C" "i-folder")}}<span>{{.Name}}</span></a>{{else if eq .Type "commit"}}<span>{{template "icon" "submodule"}}<span>{{.Name}}</span> <span class="sha">{{short .OID}}</span> <span class="muted small">submodule</span></span>{{else}}<a href="/{{$rp}}/-/blob/{{$ref}}/{{.Path}}">{{template "icon" "file"}}<span>{{.Name}}</span></a>{{end}}</td>
+      <td class="size">{{if ge .Size 0}}{{size .Size}}{{end}}</td>
+    </tr>{{end}}
+    </tbody>
+  </table>
+</div>{{end}}
+
+{{/* projectlist: []RepoCard. Linked rows with open MR/issue counts and last activity; blank state when empty. */}}
+{{define "projectlist"}}{{if .}}<ul class="list linked card projects">
+{{range .}}  <li>
     {{template "avatar" (dict "Name" .Name "Size" "md" "Square" true)}}
     <div class="grow">
-      <a class="title" href="/{{.Path}}">{{.Owner}} / {{.Name}}</a>
+      <a class="title" href="/{{.Path}}"><span class="muted">{{.Owner}} / </span>{{.Name}}</a>
       {{if .Description}}<div class="meta">{{.Description}}</div>{{end}}
     </div>
-    <span class="meta nowrap">created {{timeago .Created}}</span>
-  </li>
-{{end}}
-</ul>
-{{else}}
-<div class="card empty">No projects yet.</div>
-{{end}}
-{{end}}
-
-{{define "pusher"}}{{if .}}<span class="pill verified" title="Recorded by the server from an authenticated {{.Via}} push">✓ pushed by @{{.By}} via {{.Via}}</span>{{else}}<span class="pill neutral" title="No push-log entry for this commit">pusher unknown</span>{{end}}{{end}}
-
-{{define "diffs"}}
-{{range .}}
-<div class="diff-file">
-  <div class="fh">
-    <span class="path">{{.Path}}</span>
-    {{if ne .Status "modified"}}<span class="st {{.Status}}">{{.Status}}</span>{{end}}
-    <span class="stat-add">+{{.Additions}}</span><span class="stat-del">−{{.Deletions}}</span>
-  </div>
-  {{if .Binary}}<div class="card-body muted">Binary file changed.</div>
-  {{else if not .Hunks}}<div class="card-body muted">No content changes (mode or rename only).</div>
-  {{else}}
-  <table class="diff">
-  {{range .Hunks}}
-    <tr class="hunk"><td class="ln"></td><td class="ln"></td><td class="code">{{.Header}}</td></tr>
-    {{range .Lines}}<tr class="{{diffClass .Kind}}"><td class="ln">{{lineNo .OldNo}}</td><td class="ln">{{lineNo .NewNo}}</td><td class="code">{{.Content}}</td></tr>{{end}}
-  {{end}}
-  </table>
-  {{if .Truncated}}<div class="card-body muted">Diff truncated: this file has too many changed lines to show.</div>{{end}}
-  {{end}}
-</div>
-{{else}}
-<div class="card empty">No changes.</div>
-{{end}}
-{{end}}
-
-
-{{define "note"}}
-<div class="note">
-  <div class="note-head">{{template "avatar" (dict "Name" .Author "Size" "")}} <b>@{{.Author}}</b> commented {{timeago .At}}{{if .Version}} <span class="pill version">on v{{.Version}}</span>{{end}}</div>
-  <div class="note-body markdown">{{markdown .Body}}</div>
-</div>
-{{end}}
-
-{{define "projhead"}}
-<div class="proj-head">
-  {{template "avatar" (dict "Name" .Repo.Name "Size" "lg" "Square" true)}}
-  <div class="grow" style="flex:1"><h1>{{.Repo.Name}}</h1>{{if .Repo.Description}}<div class="desc">{{.Repo.Description}}</div>{{end}}</div>
-  <details class="dropdown">
-    <summary class="btn confirm">Code ▾</summary>
-    <div class="menu">
-      <div class="lbl"><b>Clone with HTTPS</b></div>
-      <div class="clone" style="margin:6px 0 10px"><input type="text" readonly id="cloneurl" value="{{.Repo.CloneURL}}"><button class="btn" type="button" data-copy="cloneurl">Copy</button></div>
-      <div class="hint">Push with a token from <a href="/-/device">This device</a> as the password.</div>
-      <div class="lbl" style="margin-top:10px"><b>Open a merge request by pushing</b></div>
-      <div class="codebox">git push origin HEAD:refs/for/{{.Repo.Default}} -o title="My change"</div>
-      <div class="lbl" style="margin-top:10px"><b>Fetch issues and review history too</b></div>
-      <div class="codebox">git fetch origin '+refs/newgit/*:refs/newgit/*'</div>
+    <div class="end">
+      {{if .OpenMRs}}<span class="stat" title="{{.OpenMRs}} open merge requests">{{template "icon" "mr"}}{{.OpenMRs}}</span>{{end}}
+      {{if .OpenIssues}}<span class="stat" title="{{.OpenIssues}} open issues">{{template "icon" "issue"}}{{.OpenIssues}}</span>{{end}}
+      <span>Updated {{template "time" .LastActivity}}</span>
     </div>
-  </details>
-</div>
-{{end}}
+  </li>
+{{end}}</ul>{{else}}<div class="card">{{template "blank" (dict "Icon" "files" "Title" "No projects yet" "Text" "Projects show up here once someone creates one." "Class" "compact")}}</div>{{end}}{{end}}
 
-{{define "refswitch"}}
-<details class="dropdown">
-  <summary class="btn">⑂ {{.Repo.Ref}} ▾</summary>
-  <div class="menu left">
-    {{range .Data.Tree.Branches}}<a class="opt" href="/{{$.Repo.Path}}/-/tree/{{.Name}}">{{.Name}}</a>{{end}}
-  </div>
+{{/* ------------------------------------------------------------ diffs */}}
+
+{{/* diffs: []gitx.FileDiff. Same as diffview without "View file" links. */}}
+{{define "diffs"}}{{template "diffview" (dict "Diffs" .)}}{{end}}
+
+{{/* diffview: dict "Diffs" []gitx.FileDiff, optional "RepoPath" + "Rev" (commit or ref; adds "View file" links),
+     optional "Empty" (blank-state text when there are no changes).
+     Renders a collapsible file summary, then one <details open> per file with a sticky header,
+     an accessible 4-column table and word-level highlights from Segments. */}}
+{{define "diffview"}}{{$rp := .RepoPath}}{{$rev := .Rev}}{{if .Diffs}}{{$st := diffstat .Diffs}}
+<details class="card diff-toc"{{if le (len .Diffs) 15}} open{{end}}>
+  <summary class="card-header">{{template "iconc" (dict "N" "chevron-down" "C" "chev")}}<span class="card-title">{{$st.Files}} file{{if ne $st.Files 1}}s{{end}} changed</span><span class="dstat"><span class="stat-add">+{{$st.Additions}}</span><span class="stat-del">−{{$st.Deletions}}</span></span>{{template "dbar" (dict "A" $st.Additions "D" $st.Deletions "Lg" true)}}</summary>
+  <ul class="dfiles">
+  {{range .Diffs}}<li>{{if eq .Status "added"}}{{template "iconc" (dict "N" "plus" "C" "st-added")}}<span class="sr-only">Added:</span>{{else if eq .Status "deleted"}}{{template "iconc" (dict "N" "minus" "C" "st-deleted")}}<span class="sr-only">Deleted:</span>{{else if eq .Status "renamed"}}{{template "iconc" (dict "N" "arrow-right" "C" "st-renamed")}}<span class="sr-only">Renamed:</span>{{else}}{{template "iconc" (dict "N" "dot" "C" "st-modified")}}<span class="sr-only">Modified:</span>{{end}}<a href="#{{.Anchor}}" title="{{.Path}}">{{.Path}}</a><span class="end"><span class="dstat"><span class="stat-add">+{{.Additions}}</span><span class="stat-del">−{{.Deletions}}</span></span>{{template "dbar" (dict "A" .Additions "D" .Deletions)}}</span></li>
+  {{end}}</ul>
 </details>
-{{end}}
+{{range .Diffs}}<details class="diff-file" open id="{{.Anchor}}">
+  <summary class="fh">{{template "iconc" (dict "N" "chevron-down" "C" "chev")}}
+    <span class="path">{{if eq .Status "renamed"}}<span class="old">{{.OldPath}}</span> → {{.NewPath}}{{else}}{{.Path}}{{end}}</span>
+    <span class="fh-end">
+      {{if eq .Status "added"}}<span class="pill added">Added</span>{{else if eq .Status "deleted"}}<span class="pill deleted">Deleted</span>{{else if eq .Status "renamed"}}<span class="pill renamed">Renamed</span>{{end}}
+      {{if .Binary}}<span class="pill neutral">Binary</span>{{else}}<span class="dstat"><span class="stat-add">+{{.Additions}}</span><span class="stat-del">−{{.Deletions}}</span></span>{{end}}
+      {{if and $rp $rev (ne .Status "deleted")}}<a class="btn xs ghost hide-sm" href="/{{$rp}}/-/blob/{{$rev}}/{{.NewPath}}">{{template "icon" "eye"}}View file</a>{{end}}
+    </span>
+  </summary>
+  {{if .Binary}}<div class="diff-note">Binary file not shown.</div>
+  {{else if not .Hunks}}<div class="diff-note">{{if eq .Status "renamed"}}File renamed without changes.{{else}}No content changes (file mode only).{{end}}</div>
+  {{else}}<div class="diff-body"><table class="diff">
+    <caption class="sr-only">Changes to {{.Path}}: {{.Additions}} additions, {{.Deletions}} deletions</caption>
+    <colgroup><col class="c-ln"><col class="c-ln"><col class="c-sign"><col></colgroup>
+    <thead class="sr-only"><tr><th scope="col">Old line</th><th scope="col">New line</th><th scope="col">Change</th><th scope="col">Code</th></tr></thead>
+    {{range .Hunks}}<tbody>
+      <tr class="hunk"><td class="ln"></td><td class="ln"></td><th class="code" colspan="2" scope="rowgroup">{{.Header}}</th></tr>
+      {{range .Lines}}{{$k := diffClass .Kind}}<tr class="{{$k}}"><td class="ln">{{lineNo .OldNo}}</td><td class="ln">{{lineNo .NewNo}}</td><td class="sign">{{if eq $k "add"}}<span aria-hidden="true">+</span><span class="sr-only">added</span>{{else if eq $k "del"}}<span aria-hidden="true">−</span><span class="sr-only">removed</span>{{end}}</td><td class="code">{{if .Segments}}{{range .Segments}}{{if .Changed}}<span class="wd">{{.Text}}</span>{{else}}{{.Text}}{{end}}{{end}}{{else}}{{.Content}}{{end}}</td></tr>
+      {{end}}</tbody>{{end}}
+  </table></div>
+  {{if .Truncated}}<div class="diff-note">This diff is too large to show in full. {{if and $rp $rev}}<a href="/{{$rp}}/-/blob/{{$rev}}/{{.NewPath}}">View the file</a>.{{end}}</div>{{end}}
+  {{end}}
+</details>
+{{end}}{{else}}<div class="card">{{template "blank" (dict "Icon" "file-diff" "Title" "No changes" "Text" (or .Empty "These two points in history have the same content.") "Class" "compact")}}</div>{{end}}{{end}}
 
-{{define "filetable"}}
-<div class="lastcommit">
-  {{with .Tree.LastCommit}}
-  {{template "avatar" (dict "Name" .AuthorName "Size" "")}}
-  <div class="grow"><a href="/{{$.RepoPath}}/-/commit/{{.OID}}" style="color:inherit"><b>{{.Subject}}</b></a> <span class="muted">· {{.AuthorName}} authored {{timeago .AuthorDate}}</span></div>
-  {{template "pusher" $.Tree.Pusher}}
-  <a class="sha" href="/{{$.RepoPath}}/-/commit/{{.OID}}">{{short .OID}}</a>
-  {{end}}
-</div>
-<table class="files">
-  {{if not .Tree.IsRoot}}<tr><td class="name" colspan="2"><a href="/{{.RepoPath}}/-/tree/{{.Ref}}/{{.Parent}}">..</a></td></tr>{{end}}
-  {{range .Tree.Entries}}
-  <tr>
-    <td class="name">{{if eq .Type "tree"}}<a href="/{{$.RepoPath}}/-/tree/{{$.Ref}}/{{.Path}}">{{template "icon-folder"}} {{.Name}}</a>{{else if eq .Type "commit"}}<span class="muted">{{template "icon-folder"}} {{.Name}} @ {{short .OID}} (submodule)</span>{{else}}<a href="/{{$.RepoPath}}/-/blob/{{$.Ref}}/{{.Path}}">{{template "icon-file"}} {{.Name}}</a>{{end}}</td>
-    <td class="size">{{if ge .Size 0}}{{size .Size}}{{end}}</td>
-  </tr>
-  {{end}}
-</table>
-{{end}}
+{{/* ------------------------------------------------------- comments, timeline */}}
+
+{{/* note: store.Comment (or *store.Comment). Issue comments: no version tag. */}}
+{{define "note"}}{{template "note-card" (dict "C" .)}}{{end}}
+
+{{/* mrnote: dict "C" comment, "Latest" int (latest MR version). Shows "v2" on current comments and
+     "from v1" + "outdated" when the comment was written on an older version (requirement M5). */}}
+{{define "mrnote"}}{{template "note-card" .}}{{end}}
+
+{{define "note-card"}}{{$c := .C}}{{$old := and .Latest $c.Version (lt $c.Version .Latest)}}<article class="note{{if $old}} outdated{{end}}"{{with $c.ID}} id="note-{{.}}"{{end}}>
+  <header class="note-head">
+    <a class="note-author" href="/{{$c.Author}}">@{{$c.Author}}</a>
+    <span>commented {{template "time" $c.At}}</span>
+    {{if $c.Version}}<span class="note-tags">{{if $old}}<span class="pill version" title="Written when v{{$c.Version}} was the latest version">from v{{$c.Version}}</span><span class="pill outdated">outdated</span>{{else}}<span class="pill version" title="Written on version {{$c.Version}}">v{{$c.Version}}</span>{{end}}</span>{{end}}
+  </header>
+  <div class="note-body markdown sm">{{markdown $c.Body}}</div>
+</article>{{end}}
+
+{{/* tlevent: dict "E" store.Event, "Noun" ("issue"|"merge request"), optional "Base" (MR URL, for version links),
+     "Latest" int (MR latest version), "Target" (MR target branch, for the merged line). One <li> of ol.timeline. */}}
+{{define "tlevent"}}{{$e := .E}}{{if eq $e.Kind "comment"}}{{if $e.Comment}}<li class="tl-item">
+  <a class="tl-avatar" href="/{{$e.Actor}}" tabindex="-1" aria-hidden="true">{{template "avatar" (dict "Name" $e.Actor "Size" "md")}}</a>
+  {{template "note-card" (dict "C" $e.Comment "Latest" .Latest)}}
+</li>{{end}}{{else if eq $e.Kind "version"}}<li class="tl-sys">
+  <span class="tl-badge version">{{template "icon" "push"}}</span>
+  <span class="tl-text"><a class="who" href="/{{$e.Actor}}">@{{$e.Actor}}</a> {{if eq $e.Version 1}}opened this merge request with{{else}}pushed{{end}} {{if .Base}}<a class="pill version" href="{{.Base}}?tab=changes&amp;version={{$e.Version}}">v{{$e.Version}}</a>{{else}}<span class="pill version">v{{$e.Version}}</span>{{end}} {{template "time" $e.At}}{{if and .Base (gt $e.Version 1)}}<span class="sep-dot"></span><a href="{{.Base}}?tab=versions&amp;from={{sub $e.Version 1}}&amp;to={{$e.Version}}">Compare with v{{sub $e.Version 1}}</a>{{end}}</span>
+</li>{{else if eq $e.Kind "merged"}}<li class="tl-sys">
+  <span class="tl-badge merged">{{template "icon" "merge"}}</span>
+  <span class="tl-text"><a class="who" href="/{{$e.Actor}}">@{{$e.Actor}}</a> merged this{{with .Target}} into <span class="ref">{{.}}</span>{{end}}{{with $e.Detail}} as <span class="sha">{{short .}}</span>{{end}} {{template "time" $e.At}}</span>
+</li>{{else if eq $e.Kind "closed"}}<li class="tl-sys">
+  <span class="tl-badge closed">{{template "icon" "x"}}</span>
+  <span class="tl-text"><a class="who" href="/{{$e.Actor}}">@{{$e.Actor}}</a> closed this {{.Noun}} {{template "time" $e.At}}</span>
+</li>{{else if eq $e.Kind "reopened"}}<li class="tl-sys">
+  <span class="tl-badge reopened">{{template "icon" "reopen"}}</span>
+  <span class="tl-text"><a class="who" href="/{{$e.Actor}}">@{{$e.Actor}}</a> reopened this {{.Noun}} {{template "time" $e.At}}</span>
+</li>{{end}}{{end}}

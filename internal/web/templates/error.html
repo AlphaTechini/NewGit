@@ -1,7 +1,8 @@
 {{define "content"}}
-<div class="card empty" style="margin-top:40px">
-  <h1>{{.Data.Code}}</h1>
+<div class="error-page">
+  <span class="error-code">{{.Data.Code}}</span>
+  <h1>{{if eq .Data.Code 404}}Page not found{{else if eq .Data.Code 403}}You can't do that{{else if eq .Data.Code 422}}That didn't work{{else}}Something went wrong{{end}}</h1>
   <p>{{.Data.Message}}</p>
-  <p><a href="/">Back to projects</a></p>
+  <div class="btn-row"><a class="btn primary" href="/explore">Explore projects</a><a class="btn" href="/">Go home</a></div>
 </div>
 {{end}}

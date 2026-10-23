@@ -75,16 +75,19 @@ func (s *Server) loadTemplates() error {
 
 // Page is the data every template gets.
 type Page struct {
-	Title   string
-	User    *store.User
-	CSRF    string
-	Repo    *RepoCtx
-	Nav     string
-	Flash   string
-	Error   string
-	BaseURL string
-	Data    any
-	Now     time.Time
+	Title     string
+	User      *store.User
+	CSRF      string
+	Repo      *RepoCtx
+	Nav       string
+	Flash     string // human message for the ?flash=<code> whitelist ("" when none/unknown)
+	FlashCode string // the validated code itself, e.g. "created"
+	Theme     string // "light", "dark" or "" (follow system), from cookie ng_theme
+	Path      string // current request path+query without ?flash=, a safe value for the theme form's "next"
+	Error     string
+	BaseURL   string
+	Data      any
+	Now       time.Time
 }
 
 // RepoCtx is repository context for repo pages.
@@ -97,6 +100,40 @@ type RepoCtx struct {
 	OpenMRs    int
 	CanWrite   bool
 	Empty      bool
+
+	RefKind     string   // "branch", "tag" or "commit" for Ref
+	Branches    []string // branch names, most recently committed first
+	Tags        []string // tag names, newest first
+	CommitCount int      // commits reachable from the default branch (0 if empty)
+	BranchCount int
+	TagCount    int
+}
+
+// flashMessages is the whitelist for ?flash=<code>. Unknown codes show nothing.
+var flashMessages = map[string]string{
+	"created":       "Project created.",
+	"token_created": "Token created. Copy it now: it is shown only once.",
+	"token_revoked": "Token revoked.",
+	"signed_out":    "You have been signed out.",
+	"merged":        "Merge request merged.",
+	"issue_opened":  "Issue opened.",
+	"mr_opened":     "Merge request opened.",
+	"commented":     "Comment added.",
+	"closed":        "Closed.",
+	"reopened":      "Reopened.",
+}
+
+// withFlash appends ?flash=<code> to a local path (before any #fragment).
+func withFlash(target, code string) string {
+	frag := ""
+	if i := strings.IndexByte(target, '#'); i >= 0 {
+		target, frag = target[:i], target[i:]
+	}
+	sep := "?"
+	if strings.Contains(target, "?") {
+		sep = "&"
+	}
+	return target + sep + "flash=" + url.QueryEscape(code) + frag
 }
 
 func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, p *Page) {
@@ -129,8 +166,73 @@ func (s *Server) fillPage(r *http.Request, p *Page) {
 		}
 	}
 	if p.Flash == "" {
-		p.Flash = r.URL.Query().Get("flash")
+		if msg, ok := flashMessages[r.URL.Query().Get("flash")]; ok {
+			p.Flash, p.FlashCode = msg, r.URL.Query().Get("flash")
+		}
 	}
+	u := *r.URL
+	q := u.Query()
+	q.Del("flash")
+	u.RawQuery = q.Encode()
+	p.Path = safeNext(u.RequestURI())
+	if c, err := r.Cookie(themeCookie); err == nil && (c.Value == "light" || c.Value == "dark") {
+		p.Theme = c.Value
+	}
+}
+
+const themeCookie = "ng_theme"
+
+// safeNext accepts only same-site relative paths. Browsers strip TAB, CR and
+// LF from a Location header and treat a backslash as a slash, so any control
+// byte or backslash could turn "/\t/evil.com" into the protocol-relative
+// "//evil.com"; those are rejected outright.
+func safeNext(next string) string {
+	if next == "" || next[0] != '/' || (len(next) > 1 && next[1] == '/') {
+		return "/"
+	}
+	for i := 0; i < len(next); i++ {
+		if c := next[i]; c < 0x20 || c == 0x7f || c == '\\' {
+			return "/"
+		}
+	}
+	u, err := url.Parse(next)
+	if err != nil || u.Scheme != "" || u.Host != "" || u.User != nil {
+		return "/"
+	}
+	return next
+}
+
+// handleTheme sets the cosmetic theme cookie. Signed-in visitors must send a
+// valid CSRF token (it is derived from the session cookie); signed-out
+// visitors have no session and therefore no token, and the cookie is purely
+// cosmetic (SameSite=Lax, no authority), so no CSRF check is made for them.
+func (s *Server) handleTheme(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<16)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	if _, val, ok := s.Auth.SessionUser(r); ok && !s.Auth.CheckCSRF(val, r.PostForm.Get("csrf")) {
+		s.errorPage(w, r, 403, "Your session token did not match. Reload the page and try again.")
+		return
+	}
+	c := &http.Cookie{Name: themeCookie, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: strings.HasPrefix(s.BaseURL, "https://")}
+	switch r.PostForm.Get("theme") {
+	case "light", "dark":
+		c.Value = r.PostForm.Get("theme")
+		c.MaxAge = 365 * 24 * 3600
+	case "system":
+		c.MaxAge = -1
+	default:
+		http.Error(w, "theme must be light, dark or system", http.StatusBadRequest)
+		return
+	}
+	http.SetCookie(w, c)
+	http.Redirect(w, r, safeNext(r.PostForm.Get("next")), http.StatusSeeOther)
 }
 
 func currentUser(r *http.Request) *store.User {
@@ -214,9 +316,14 @@ func (s *Server) Handler() http.Handler {
 		_, _ = w.Write([]byte(s.chromaCSS))
 	})
 	mux.Handle("/-/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=300")
+		if strings.HasPrefix(r.URL.Path, "/-/static/fonts/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			w.Header().Set("Cache-Control", "public, max-age=300")
+		}
 		static.ServeHTTP(w, r)
 	}))
+	mux.HandleFunc("/-/theme", s.handleTheme)
 	mux.HandleFunc("/-/signin", s.handleSignin)
 	mux.HandleFunc("/-/signout", s.handleSignout)
 	mux.HandleFunc("/-/auth/challenge", s.handleChallenge)
@@ -302,6 +409,8 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request) {
 		s.handleCommit(w, r, repo, sub)
 	case "branches":
 		s.handleBranches(w, r, repo)
+	case "tags":
+		s.handleTags(w, r, repo)
 	case "pushes":
 		s.handlePushes(w, r, repo)
 	case "issues":
@@ -331,6 +440,37 @@ func (s *Server) repoCtx(r *http.Request, repo store.Repo, ref string) *RepoCtx 
 	}
 	oi, om := s.Store.CountOpen(repo.ID)
 	rc := &RepoCtx{Repo: repo, Ref: ref, Default: def, CloneURL: s.BaseURL + "/" + repo.Path() + ".git", OpenIssues: oi, OpenMRs: om, Empty: empty}
+	rc.Branches, rc.Tags = []string{}, []string{}
+	if bs, _ := gitx.ListBranches(ctx, repo.Dir); bs != nil {
+		for _, b := range bs {
+			rc.Branches = append(rc.Branches, b.Name)
+		}
+	}
+	if ts, _ := gitx.ListTags(ctx, repo.Dir); ts != nil {
+		for _, t := range ts {
+			rc.Tags = append(rc.Tags, t.Name)
+		}
+	}
+	rc.BranchCount, rc.TagCount = len(rc.Branches), len(rc.Tags)
+	if !empty {
+		rc.CommitCount, _ = gitx.CountCommits(ctx, repo.Dir, "refs/heads/"+def)
+	}
+	rc.RefKind = "commit"
+	for _, b := range rc.Branches {
+		if b == ref {
+			rc.RefKind = "branch"
+		}
+	}
+	if rc.RefKind == "commit" {
+		for _, t := range rc.Tags {
+			if t == ref {
+				rc.RefKind = "tag"
+			}
+		}
+	}
+	if empty {
+		rc.RefKind = "branch"
+	}
 	if u := currentUser(r); u != nil {
 		rc.CanWrite = repo.CanWrite(u.ID)
 	}
