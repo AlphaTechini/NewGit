@@ -92,6 +92,28 @@ make smoke
 
 `scripts/device-client.mjs` is a headless device client (same protocol as the browser), useful for scripted user journeys.
 
+### UI screenshots
+
+The JavaScript tooling uses pnpm. Playwright drives Chromium against a server seeded with demo data:
+
+```sh
+pnpm install
+pnpm screenshots                 # every page in light, dark and 390px mobile, written to screenshots/
+pnpm screenshots --keep          # leave the seeded server running to click around
+```
+
+The seed has two accounts, a project with branches, tags, a versioned AGit merge request, a branch merge request and issues. Set `NEWGIT_BIN` to build the binary somewhere other than `bin/newgit`. The run fails on any 5xx or template error.
+
+## Design
+
+The UI is server-rendered with no framework.
+
+- **Theme:** design tokens with light and dark themes. Follows the system setting, or set it from the theme menu (a cookie, so no flash on load).
+- **Font:** Inter Variable, self-hosted under `internal/web/static/fonts/` (SIL OFL 1.1).
+- **Icons:** an SVG sprite at `internal/web/static/icons.svg`.
+- **Style guide:** `/-/static/styleguide.html` shows every component in both themes.
+- **JavaScript:** the only script is `device.js`. It handles device sign-in, copy buttons and small conveniences such as Escape closing menus and Ctrl+Enter to comment.
+
 ## Layout
 
 ```
