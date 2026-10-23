@@ -19,6 +19,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// NEWGIT_BIN lets parallel runs build to separate paths.
+const BIN = process.env.NEWGIT_BIN ? path.resolve(process.env.NEWGIT_BIN) : path.join(ROOT, "bin", "newgit");
 const DEVICE_CLIENT = path.join(ROOT, "scripts", "device-client.mjs");
 const argv = process.argv.slice(2);
 const KEEP = argv.includes("--keep");
@@ -910,12 +912,12 @@ async function main() {
   const port = await freePort();
   const base = `http://localhost:${port}`;
 
-  console.log("building bin/newgit");
-  execFileSync("go", ["build", "-o", "bin/newgit", "./cmd/newgit"], { cwd: ROOT, stdio: "inherit" });
+  console.log(`building ${BIN}`);
+  execFileSync("go", ["build", "-o", BIN, "./cmd/newgit"], { cwd: ROOT, stdio: "inherit" });
 
   const logPath = path.join(workDir, "server.log");
   const logFd = openSync(logPath, "w");
-  serverProc = spawn(path.join(ROOT, "bin", "newgit"), ["-addr", `127.0.0.1:${port}`, "-data", dataDir, "-base-url", base], {
+  serverProc = spawn(BIN, ["-addr", `127.0.0.1:${port}`, "-data", dataDir, "-base-url", base], {
     stdio: ["ignore", logFd, logFd],
   });
   let up = false;
