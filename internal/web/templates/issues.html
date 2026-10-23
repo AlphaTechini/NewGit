@@ -1,24 +1,26 @@
-{{define "crumbs"}}<span class="sep">/</span><span>Issues</span>{{end}}
+{{define "crumbs"}}<li aria-current="page">Issues</li>{{end}}
 {{define "content"}}
-<div class="toolbar"><h1 class="grow" style="margin:0">Issues</h1>{{if .User}}<a class="btn confirm" href="/{{.Repo.Path}}/-/issues/new">New issue</a>{{else}}<a class="btn" href="/-/signin">Sign in to open an issue</a>{{end}}</div>
-<div class="tabs">
-  <a class="{{if eq .Data.State "opened"}}active{{end}}" href="?state=opened">Open <span class="count">{{.Data.CountOpen}}</span></a>
-  <a class="{{if eq .Data.State "closed"}}active{{end}}" href="?state=closed">Closed <span class="count">{{.Data.CountClosed}}</span></a>
-  <a class="{{if eq .Data.State "all"}}active{{end}}" href="?state=all">All</a>
-</div>
-<ul class="list card">
-{{range .Data.Issues}}
-  <li>
-    <div class="grow">
-      <a class="title" href="/{{$.Repo.Path}}/-/issues/{{.Number}}">{{.Title}}</a>
-      <div class="meta">#{{.Number}} · opened {{timeago .Created}} by @{{.Author}}{{if eq .State "closed"}} · <span class="pill closed">closed</span>{{end}}</div>
-    </div>
-    <span class="meta nowrap">💬 {{len .Comments}}</span>
-    <span class="meta nowrap">updated {{timeago .Updated}}</span>
-  </li>
+<div class="page-head"><div><h1 class="page-title">Issues</h1></div>
+  <div class="page-actions">{{if .User}}<a class="btn primary" href="/{{.Repo.Path}}/-/issues/new">{{template "icon" "plus"}}New issue</a>{{else}}<a class="btn" href="/-/signin?next={{.Path | urlquery}}">Sign in to open an issue</a>{{end}}</div></div>
+<nav class="tabs" aria-label="Issue state">
+  <a href="?state=opened"{{if eq .Data.State "opened"}} aria-current="page"{{end}}>{{template "icon" "issue"}}Open <span class="count">{{.Data.CountOpen}}</span></a>
+  <a href="?state=closed"{{if eq .Data.State "closed"}} aria-current="page"{{end}}>{{template "icon" "issue-closed"}}Closed <span class="count">{{.Data.CountClosed}}</span></a>
+  <a href="?state=all"{{if eq .Data.State "all"}} aria-current="page"{{end}}>All</a>
+</nav>
+{{if .Data.Issues}}<ul class="list linked card">
+{{range .Data.Issues}}<li>
+  {{template "stateicon" (dict "Kind" "issue" "State" .State)}}
+  <div class="grow"><a class="title" href="/{{$.Repo.Path}}/-/issues/{{.Number}}">{{.Title}}</a>
+    <div class="meta">#{{.Number}} opened {{template "time" .Created}} by @{{.Author}}</div></div>
+  <div class="end">{{with len .Comments}}<span class="stat" title="{{.}} comment{{if ne . 1}}s{{end}}">{{template "icon" "comment"}}{{.}}<span class="sr-only"> comment{{if ne . 1}}s{{end}}</span></span>{{end}}<span class="hide-sm">Updated {{template "time" .Updated}}</span></div>
+</li>{{end}}</ul>
 {{else}}
-  <li class="empty" style="display:block">No issues here.</li>
+<div class="card"><div class="blank compact">
+  <div class="blank-art" aria-hidden="true">{{template "icon" "issue"}}</div>
+  <h2 class="blank-title">{{if eq .Data.State "closed"}}No closed issues{{else if eq .Data.State "all"}}No issues yet{{else}}No open issues{{end}}</h2>
+  <p class="blank-text">Issues track bugs and ideas. They live in this repository as <span class="mono">refs/newgit/issues/N</span>, so a git fetch brings them along.</p>
+  <div class="blank-actions">{{if .User}}<a class="btn primary" href="/{{.Repo.Path}}/-/issues/new">New issue</a>{{else}}<a class="btn" href="/-/signin?next={{.Path | urlquery}}">Sign in to open an issue</a>{{end}}</div>
+</div></div>
 {{end}}
-</ul>
-<p class="hint">Issues are stored in this repository as <span class="mono">refs/newgit/issues/N</span>. Fetch them with <span class="mono">git fetch origin '+refs/newgit/*:refs/newgit/*'</span>.</p>
+<p class="footer-note">{{template "icon" "database"}}Fetch issues with <code>git fetch origin '+refs/newgit/*:refs/newgit/*'</code></p>
 {{end}}

@@ -1,8 +1,16 @@
+{{define "pageclass"}}medium{{end}}
 {{define "content"}}
-<h1>This device</h1>
-<div class="card"><div class="card-body devicecard">
-  {{template "avatar" (dict "Name" .User.Username "Size" "lg")}}
-  <dl class="kv" style="flex:1">
+<div class="page-head"><div><h1 class="page-title">This device</h1><p class="page-desc">Your account lives in this browser. Tokens let git and agents act for it.</p></div></div>
+{{with .Data.NewToken}}
+<div class="token-reveal" role="status">
+  <span class="alert-title">{{template "icon" "check-circle"}}Copy your new token now. You will not see it again.</span>
+  <div class="token-value" id="newtoken">{{.}}</div>
+  <div class="btn-row">{{template "copybtn" "newtoken"}}<span class="hint mt-0">Use it as the password when git asks. The username can be anything.</span></div>
+</div>
+{{end}}
+<div class="card"><div class="card-body device-card">
+  {{template "avatar" (dict "Name" .User.Username "Size" "xl")}}
+  <dl class="kv">
     <dt>Account</dt><dd><a href="/{{.User.Username}}">@{{.User.Username}}</a></dd>
     <dt>Device key</dt><dd>ECDSA P-256, generated in this browser, not exportable</dd>
     <dt>Account id</dt><dd class="mono">{{.User.ID}}</dd>
@@ -10,66 +18,60 @@
   </dl>
 </div></div>
 
-<h2>Personal access tokens</h2>
-<p class="muted">Git over HTTPS and AI agents (MCP) cannot use your browser's key, so this device issues tokens for them. Use a token as the <b>password</b> when git asks; the username can be anything. Tokens are shown once and stored only as a hash.</p>
+<div class="section-head"><h2 class="section-title">Personal access tokens</h2></div>
+<p class="muted">Git over HTTPS and AI agents (MCP) cannot use your browser's key, so this device issues tokens for them. Tokens are shown once and stored only as a hash.</p>
+<form method="post" action="/-/device/tokens" class="card">
+  <div class="card-header"><span class="card-title">Create a token</span></div>
+  <div class="card-body">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="field"><label for="tname">Name</label><input type="text" id="tname" name="name" required maxlength="60" placeholder="laptop git, claude agent" style="max-width:360px"></div>
+    <div class="field"><span class="label" id="scope-l">Scope</span>
+      <div class="choices" role="radiogroup" aria-labelledby="scope-l">
+        <label class="choice"><input type="radio" name="scope" value="write" checked><span><span class="choice-title">Write</span><span class="choice-desc">Push, open issues and merge requests</span></span></label>
+        <label class="choice"><input type="radio" name="scope" value="read"><span><span class="choice-title">Read</span><span class="choice-desc">Clone and read through MCP only</span></span></label>
+      </div></div>
+    <div class="form-actions"><button class="btn primary" type="submit">{{template "icon" "key"}}Create token</button></div>
+  </div>
+</form>
 
-{{if .Data.NewToken}}
-<div class="alert success">
-  <b>New token, copy it now. It will not be shown again:</b>
-  <div class="token-new" id="newtoken" style="margin:8px 0">{{.Data.NewToken}}</div>
-  <button class="btn sm" type="button" data-copy="newtoken">Copy token</button>
-</div>
+{{$active := 0}}{{$revoked := 0}}
+{{range .User.Tokens}}{{if .Revoked}}{{$revoked = add $revoked 1}}{{else}}{{$active = add $active 1}}{{end}}{{end}}
+<div class="section-head"><h3 class="section-title">Active tokens <span class="count">{{$active}}</span></h3></div>
+{{if $active}}<ul class="list card">
+{{range .User.Tokens}}{{if not .Revoked}}<li>
+  {{template "iconc" (dict "N" "key" "C" "list-icon")}}
+  <div class="grow"><div class="title">{{.Name}} <span class="pill {{if eq .Scope "write"}}accent{{else}}neutral{{end}}">{{.Scope}}</span></div>
+    <div class="meta">Created {{template "time" .Created}}<span class="sep-dot"></span>Issued by this device<span class="sep-dot"></span><span class="mono">{{.ID}}</span></div></div>
+  <div class="end"><form method="post" action="/-/device/tokens/revoke"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="id" value="{{.ID}}">
+    <button class="btn sm danger" type="submit" data-confirm="Revoke token '{{.Name}}'? Anything using it stops working.">Revoke<span class="sr-only"> token {{.Name}}</span></button></form></div>
+</li>{{end}}{{end}}
+</ul>
+{{else}}
+<div class="card">{{template "blank" (dict "Icon" "key" "Title" "No tokens yet" "Text" "Create one above to push with git or connect an agent." "Class" "compact")}}</div>
+{{end}}
+{{if $revoked}}
+<details class="card mt-4"><summary class="card-header"><span class="card-title">Revoked</span> <span class="count">{{$revoked}}</span></summary>
+<ul class="list">
+{{range .User.Tokens}}{{if .Revoked}}<li>
+  {{template "iconc" (dict "N" "key" "C" "list-icon")}}
+  <div class="grow"><div class="title">{{.Name}} <span class="pill revoked">revoked</span></div>
+    <div class="meta">Created {{template "time" .Created}}<span class="sep-dot"></span><span class="mono">{{.ID}}</span></div></div>
+</li>{{end}}{{end}}
+</ul></details>
 {{end}}
 
-<div class="card">
-  <div class="card-header"><b>Create a token</b></div>
-  <div class="card-body">
-    <form method="post" action="/-/device/tokens">
-      <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <label for="tname">Name</label>
-      <input type="text" id="tname" name="name" required maxlength="60" placeholder="laptop git, claude agent, ..." style="max-width:360px">
-      <label for="tscope">Scope</label>
-      <select id="tscope" name="scope" style="max-width:360px">
-        <option value="write">write: push, open issues and merge requests</option>
-        <option value="read">read: clone and read through MCP only</option>
-      </select>
-      <div class="form-actions"><button class="btn confirm" type="submit">Create token</button></div>
-    </form>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-header"><b>Tokens issued by this device</b></div>
-  <ul class="list">
-  {{range .User.Tokens}}
-    <li>
-      <div class="grow">
-        <div class="title">{{.Name}} {{if .Revoked}}<span class="pill closed">revoked</span>{{else}}<span class="pill neutral">{{.Scope}}</span>{{end}}</div>
-        <div class="meta">created {{timeago .Created}} · id {{.ID}}</div>
-      </div>
-      {{if not .Revoked}}
-      <form method="post" action="/-/device/tokens/revoke">
-        <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="id" value="{{.ID}}">
-        <button class="btn sm danger" type="submit" data-confirm="Revoke this token?">Revoke</button>
-      </form>
-      {{end}}
-    </li>
-  {{else}}
-    <li class="muted">No tokens yet.</li>
-  {{end}}
+<div class="section-head"><h2 class="section-title">What tokens can and cannot do</h2></div>
+<div class="alert info">{{template "icon" "shield"}}<div class="alert-body">
+  <ul class="stack mt-0 mb-0">
+    <li>A token is a secret, like a password. Anyone who holds it can act as you within its scope, from any machine.</li>
+    <li>Tokens work for git over HTTPS and MCP only. They cannot sign in to this website or create other tokens.</li>
+    <li>A read token can clone and read. A write token can also push, and open and change issues and merge requests.</li>
+    <li>NewGit stores only a hash, so a lost token cannot be shown again. Revoke it and create a new one.</li>
+    <li>Your device key never leaves this browser. If you clear this site's data, the key is gone and you lose access to this account. Revoke tokens first if you want them to stop working.</li>
   </ul>
-</div>
+</div></div>
 
-<h2>Connect an AI agent (MCP)</h2>
+<div class="section-head"><h2 class="section-title">Connect an AI agent (MCP)</h2></div>
 <p class="muted">Streamable HTTP endpoint. Send the token as a Bearer token.</p>
-<div class="codebox" id="mcpcfg">{
-  "mcpServers": {
-    "newgit": {
-      "type": "http",
-      "url": "{{.Data.MCPURL}}",
-      "headers": { "Authorization": "Bearer &lt;your token&gt;" }
-    }
-  }
-}</div>
-<p><button class="btn sm" type="button" data-copy="mcpcfg">Copy config</button></p>
+{{template "codebox" (dict "ID" "mcpcfg" "Code" (printf "{\n  \"mcpServers\": {\n    \"newgit\": {\n      \"type\": \"http\",\n      \"url\": \"%s\",\n      \"headers\": { \"Authorization\": \"Bearer <your token>\" }\n    }\n  }\n}" .Data.MCPURL))}}
 {{end}}

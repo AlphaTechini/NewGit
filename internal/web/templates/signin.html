@@ -1,28 +1,29 @@
+{{define "pageclass"}}tight{{end}}
 {{define "content"}}
-<div class="signin">
-  <div class="card">
-    <div class="card-header"><b>Sign in with this device</b></div>
-    <div class="card-body">
-      <p>NewGit has no passwords and no email. <b>This device is your account.</b> Your browser creates a private key that cannot be copied out of it, and proves it holds the key each time you visit.</p>
-      <p class="muted">A different device or browser gets its own separate account. If you clear this site's data, this device's key is gone and so is access to its account.</p>
-
-      <div id="ng-existing" class="hidden">
-        <div class="alert info">This device already holds the key for <b id="ng-existing-name"></b>.</div>
-        <button class="btn confirm" id="ng-signin-btn" type="button">Sign in as this device</button>
-        <div id="ng-reset" class="hidden" style="margin-top:12px">
-          <div class="alert warning">The server does not know this device's key (its data may have been reset).</div>
-          <button class="btn danger" type="button">Forget this device key and create a new account</button>
-        </div>
+<div class="auth"><div class="auth-card">
+  <div class="auth-head">{{template "logo"}}<h1>Sign in with this device</h1><p>No password, no email. This browser holds your key.</p></div>
+  <div class="auth-body">
+    <ol class="steps">
+      <li><span><b>This browser makes a key</b>ECDSA P-256, marked non-exportable, kept in this browser only.</span></li>
+      <li><span><b>The server keeps the public half</b>Your account id is its thumbprint.</span></li>
+      <li><span><b>Each visit signs a challenge</b>You stay signed in. There is nothing to type.</span></li>
+    </ol>
+    <div id="ng-existing" class="hidden">
+      <div class="alert info">{{template "icon" "device"}}<div class="alert-body">This device already holds the key for <b id="ng-existing-name"></b>.</div></div>
+      <button class="btn primary block lg mt-4" id="ng-signin-btn" type="button">Sign in as this device</button>
+      <div id="ng-reset" class="hidden mt-4">
+        <div class="alert warning">{{template "icon" "alert"}}<div class="alert-body">The server does not know this device's key. Its data may have been reset.</div></div>
+        <button class="btn danger block mt-4" type="button">Forget this device key and create a new account</button>
       </div>
-
-      <form id="ng-register-form" autocomplete="off">
-        <label for="username">Choose a username</label>
-        <input type="text" id="username" name="username" required pattern="[a-z0-9][a-z0-9-]{1,30}[a-z0-9]" placeholder="e.g. rehoboth" style="max-width:320px">
-        <p class="hint">3 to 32 characters: lowercase letters, digits and dashes.</p>
-        <div class="form-actions"><button class="btn confirm" type="submit">Create account on this device</button></div>
-      </form>
-      <div class="status-line" id="ng-status"></div>
     </div>
+    <form id="ng-register-form" autocomplete="off">
+      <div class="field"><label for="username">Choose a username</label>
+        <input type="text" id="username" name="username" required pattern="[a-z0-9][a-z0-9-]{1,30}[a-z0-9]" placeholder="e.g. rehoboth" aria-describedby="username-hint" autocapitalize="none" spellcheck="false">
+        <p class="hint" id="username-hint">3 to 32 characters: lowercase letters, digits and dashes.</p></div>
+      <button class="btn primary block lg" type="submit">Create account on this device</button>
+    </form>
+    <div class="status-line" id="ng-status" role="status" aria-live="polite"></div>
   </div>
-</div>
+  <div class="auth-foot">A different device or browser gets its own separate account. Clearing this site's data removes the key, and there is no recovery.</div>
+</div></div>
 {{end}}
