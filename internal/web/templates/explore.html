@@ -1,0 +1,7 @@
+{{define "content"}}
+<div class="toolbar"><h1 class="grow" style="margin:0">Explore projects</h1>{{if .User}}<a class="btn confirm" href="/-/new">New project</a>{{end}}</div>
+{{if not .User}}
+<div class="alert info">NewGit is a small Git host where <b>your device is your account</b>: no passwords, no email. Everyone can browse and clone. <a href="/-/signin">Sign in with this device</a> to create projects, open issues and merge requests.</div>
+{{end}}
+{{template "projectlist" .Data.All}}
+{{end}}

@@ -1,0 +1,16 @@
+{{define "crumbs"}}<span class="sep">/</span><a href="/{{.Repo.Path}}/-/tree/{{.Repo.Ref}}">{{.Repo.Ref}}</a>{{range crumbs .Data.Tree.Path}}<span class="sep">/</span><a href="/{{$.Repo.Path}}/-/tree/{{$.Repo.Ref}}/{{.Path}}">{{.Name}}</a>{{end}}{{end}}
+{{define "content"}}
+<div class="toolbar">
+  {{template "refswitch" .}}
+  <span class="mono">{{.Repo.Name}}{{if .Data.Tree.Path}} / {{.Data.Tree.Path}}{{end}}</span>
+  <span class="grow"></span>
+  <a class="btn" href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}{{if .Data.Tree.Path}}/{{.Data.Tree.Path}}{{end}}">History</a>
+</div>
+{{template "filetable" (dict "Tree" .Data.Tree "RepoPath" .Repo.Path "Ref" .Repo.Ref "Parent" .Data.Parent)}}
+{{if .Data.Tree.Readme}}
+<div class="card" style="margin-top:16px">
+  <div class="card-header"><b>{{.Data.Tree.Readme}}</b></div>
+  <div class="card-body markdown">{{.Data.Tree.ReadmeHTML}}</div>
+</div>
+{{end}}
+{{end}}

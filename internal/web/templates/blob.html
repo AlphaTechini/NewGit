@@ -1,0 +1,23 @@
+{{define "crumbs"}}<span class="sep">/</span><a href="/{{.Repo.Path}}/-/tree/{{.Repo.Ref}}">{{.Repo.Ref}}</a>{{range crumbs .Data.Path}}<span class="sep">/</span><a href="/{{$.Repo.Path}}/-/blob/{{$.Repo.Ref}}/{{.Path}}">{{.Name}}</a>{{end}}{{end}}
+{{define "content"}}
+{{with .Data.LastCommit}}
+<div class="lastcommit" style="border-bottom:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px">
+  {{template "avatar" (dict "Name" .AuthorName "Size" "")}}
+  <div class="grow"><a href="/{{$.Repo.Path}}/-/commit/{{.OID}}" style="color:inherit"><b>{{.Subject}}</b></a> <span class="muted">· {{.AuthorName}} authored {{timeago .AuthorDate}}</span></div>
+  <a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{short .OID}}</a>
+</div>
+{{end}}
+<div class="blob-head">
+  {{template "icon-file"}}
+  <span class="grow mono">{{.Data.Name}}</span>
+  <span class="muted">{{if .Data.Lines}}{{.Data.Lines}} lines · {{end}}{{size .Data.Size}}</span>
+  <a class="btn sm" href="/{{.Repo.Path}}/-/raw/{{.Repo.Ref}}/{{.Data.Path}}">Raw</a>
+  <a class="btn sm" href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}/{{.Data.Path}}">History</a>
+</div>
+<div class="blob-body">
+  {{if .Data.TooLarge}}<div class="empty">This file is too large to display. <a href="/{{.Repo.Path}}/-/raw/{{.Repo.Ref}}/{{.Data.Path}}">Download it</a>.</div>
+  {{else if .Data.Binary}}<div class="empty">Binary file. <a href="/{{.Repo.Path}}/-/raw/{{.Repo.Ref}}/{{.Data.Path}}">Download it</a>.</div>
+  {{else if .Data.Markdown}}<div class="card-body markdown">{{.Data.Markdown}}</div>
+  {{else}}{{.Data.Highlighted}}{{end}}
+</div>
+{{end}}

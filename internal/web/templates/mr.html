@@ -1,0 +1,124 @@
+{{define "crumbs"}}<span class="sep">/</span><a href="/{{.Repo.Path}}/-/merge_requests">Merge requests</a><span class="sep">/</span><span>!{{.Data.MR.Number}}</span>{{end}}
+{{define "content"}}
+{{$m := .Data.MR}}
+{{$base := printf "/%s/-/merge_requests/%d" .Repo.Path $m.Number}}
+<div class="issuable-head">
+  {{if eq $m.State "opened"}}<span class="pill opened">Open</span>{{else if eq $m.State "merged"}}<span class="pill merged">Merged</span>{{else}}<span class="pill closed">Closed</span>{{end}}
+  <span>Merge request !{{$m.Number}} created {{timeago $m.Created}} by</span> {{template "avatar" (dict "Name" $m.Author "Size" "")}} <b>@{{$m.Author}}</b>
+  <span class="grow"></span>
+  {{if and .Data.CanState (ne $m.State "merged")}}
+  <form method="post" action="{{$base}}/state">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    {{if eq $m.State "opened"}}<input type="hidden" name="state" value="closed"><button class="btn" type="submit">Close</button>
+    {{else}}<input type="hidden" name="state" value="opened"><button class="btn" type="submit">Reopen</button>{{end}}
+  </form>
+  {{end}}
+</div>
+<div class="issuable-title">{{$m.Title}}</div>
+<p class="muted">
+  {{if $m.SourceBranch}}<span class="mono">{{$m.SourceBranch}}</span>{{else}}<span class="pill agit">pushed to refs/for/{{$m.TargetBranch}}</span> topic <span class="mono">{{$m.Topic}}</span>{{end}}
+  → <span class="mono">{{$m.TargetBranch}}</span> · {{len $m.Versions}} version{{if ne (len $m.Versions) 1}}s{{end}}
+</p>
+<div class="tabs">
+  <a class="{{if eq .Data.Tab ""}}active{{end}}" href="{{$base}}">Overview <span class="count">{{len $m.Comments}}</span></a>
+  <a class="{{if eq .Data.Tab "commits"}}active{{end}}" href="{{$base}}?tab=commits">Commits <span class="count">{{len .Data.Commits}}</span></a>
+  <a class="{{if eq .Data.Tab "changes"}}active{{end}}" href="{{$base}}?tab=changes">Changes</a>
+  <a class="{{if eq .Data.Tab "versions"}}active{{end}}" href="{{$base}}?tab=versions">Versions <span class="count">{{len $m.Versions}}</span></a>
+</div>
+
+{{if eq .Data.Tab "commits"}}
+<ul class="list card">
+{{range .Data.Commits}}
+  <li>{{template "avatar" (dict "Name" .AuthorName "Size" "md")}}
+    <div class="grow"><a class="title" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{.Subject}}</a><div class="meta">{{.AuthorName}} authored {{timeago .AuthorDate}}</div></div>
+    <a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{short .OID}}</a></li>
+{{else}}<li class="muted">No commits.</li>{{end}}
+</ul>
+
+{{else if eq .Data.Tab "changes"}}
+<div class="toolbar">
+  <span class="muted">Showing changes of</span>
+  <details class="dropdown"><summary class="btn">v{{.Data.Version}} ▾</summary>
+    <div class="menu left">{{range $m.Versions}}<a class="opt" href="{{$base}}?tab=changes&version={{.N}}">v{{.N}} · {{short .Head}} · {{timeago .At}}</a>{{end}}</div>
+  </details>
+  <span class="muted">against the merge base with <span class="mono">{{$m.TargetBranch}}</span></span>
+</div>
+{{template "diffs" .Data.Diffs}}
+
+{{else if eq .Data.Tab "versions"}}
+<div class="card"><div class="card-body">
+  <p style="margin-top:0">Every push to this merge request is kept as an immutable ref (<span class="mono">refs/merge-requests/{{$m.Number}}/vK</span>). Compare any two versions with <span class="mono">git range-diff</span> to see exactly what a rebase or amend changed.</p>
+  <form method="get" action="{{$base}}" class="btn-row">
+    <input type="hidden" name="tab" value="versions">
+    <span>Compare</span>
+    <select name="from" style="width:auto">{{range $m.Versions}}<option value="{{.N}}" {{if eq .N $.Data.From}}selected{{end}}>v{{.N}} ({{short .Head}})</option>{{end}}</select>
+    <span>with</span>
+    <select name="to" style="width:auto">{{range $m.Versions}}<option value="{{.N}}" {{if eq .N $.Data.To}}selected{{end}}>v{{.N}} ({{short .Head}})</option>{{end}}</select>
+    <button class="btn" type="submit">Compare</button>
+  </form>
+</div></div>
+<ul class="list card">
+{{range $m.Versions}}
+  <li><span class="pill version">v{{.N}}</span><div class="grow"><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.Head}}">{{short .Head}}</a> <span class="meta">pushed by @{{.Pusher}} {{timeago .At}}{{if .Base}} · base {{short .Base}}{{end}}</span></div>
+  <a class="btn sm" href="{{$base}}?tab=changes&version={{.N}}">Changes</a></li>
+{{end}}
+</ul>
+{{if lt (len $m.Versions) 2}}
+<div class="card empty">Only one version so far. Push again to create v2:
+  <div class="codebox" style="margin:8px auto;display:inline-block;text-align:left">{{if $m.SourceBranch}}git push origin {{$m.SourceBranch}}{{else}}{{.Data.AGitHint}}{{end}}</div></div>
+{{else if .Data.RangeError}}<div class="alert danger">range-diff failed: {{.Data.RangeError}}</div>
+{{else if .Data.Range}}
+<h3>v{{.Data.From}} → v{{.Data.To}}</h3>
+<div class="legend"><span><b>=</b> unchanged commit</span><span><b>!</b> commit changed (diff of the diffs shown)</span><span><b>&lt;</b> only in v{{.Data.From}}</span><span><b>&gt;</b> only in v{{.Data.To}}</span></div>
+<div class="rangediff">{{range .Data.Range}}<div class="{{.Kind}}">{{.Text}}</div>{{end}}</div>
+{{else}}<div class="card empty">Pick two different versions to compare.</div>{{end}}
+
+{{else}}
+{{if $m.Description}}<div class="markdown">{{markdown $m.Description}}</div>{{else}}<p class="muted">No description.</p>{{end}}
+
+<div class="mergebox">
+  {{if eq $m.State "merged"}}
+    <div class="row"><span class="pill merged">Merged</span> by @{{$m.MergedBy}} as <a class="sha" href="/{{.Repo.Path}}/-/commit/{{$m.MergeCommit}}">{{short $m.MergeCommit}}</a></div>
+  {{else if eq $m.State "closed"}}
+    <div class="row"><span class="pill closed">Closed</span> This merge request was closed without merging.</div>
+  {{else}}
+    {{with .Data.Status}}
+    <div class="row">
+      {{if .Mergeable}}<span class="ok">✓ Ready to merge</span><span class="muted">No conflicts with {{$m.TargetBranch}} (checked with <span class="mono">git merge-tree</span>, no checkout).</span>
+      {{else if .Conflicts}}<span class="bad">✗ Merge conflicts</span><span class="muted">in {{range $i, $f := .Conflicts}}{{if $i}}, {{end}}<span class="mono">{{$f}}</span>{{end}}. Rebase and push a new version.</span>
+      {{else}}<span class="bad">Cannot merge</span><span class="muted">{{.Reason}}</span>{{end}}
+    </div>
+    {{if and $.Data.CanMerge .Mergeable}}
+    <div class="row">
+      <form method="post" action="{{$base}}/merge"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="btn success" type="submit">Merge</button></form>
+      <span class="muted">Creates a merge commit on <span class="mono">{{$m.TargetBranch}}</span>.</span>
+    </div>
+    {{end}}
+    {{end}}
+    <div class="row" style="display:block">
+      <div class="muted" style="margin-bottom:4px">Check out this merge request locally:</div>
+      <div class="codebox">{{.Data.FetchHint}}</div>
+      {{if not $m.SourceBranch}}<div class="muted" style="margin:8px 0 4px">Push a new version:</div><div class="codebox">{{.Data.AGitHint}}</div>{{end}}
+    </div>
+  {{end}}
+</div>
+
+<h2>Activity</h2>
+<ul class="timeline">
+{{range $m.Timeline}}
+  {{if eq .Kind "comment"}}<li><span class="dot">{{template "avatar" (dict "Name" .Actor "Size" "md")}}</span>{{template "note" .Comment}}</li>
+  {{else if eq .Kind "version"}}<li class="sys"><span class="dot"></span><b>@{{.Actor}}</b> {{if eq .Version 1}}opened this merge request with{{else}}pushed{{end}} <span class="pill version">v{{.Version}}</span> {{timeago .At}}{{if gt .Version 1}} · <a href="{{$base}}?tab=versions&from={{sub .Version 1}}&to={{.Version}}">compare with v{{sub .Version 1}}</a>{{end}}</li>
+  {{else if eq .Kind "merged"}}<li class="sys"><span class="dot"></span><b>@{{.Actor}}</b> merged {{timeago .At}}</li>
+  {{else}}<li class="sys"><span class="dot"></span><b>@{{.Actor}}</b> {{.Kind}} this merge request {{timeago .At}}</li>{{end}}
+{{end}}
+</ul>
+<a id="latest"></a>
+{{if .User}}
+<form method="post" action="{{$base}}/comment" class="card"><div class="card-body">
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+  <textarea name="body" required placeholder="Write a comment (Markdown supported). It will be tagged with v{{len $m.Versions}}."></textarea>
+  <div class="form-actions"><button class="btn confirm" type="submit">Comment</button></div>
+</div></form>
+{{else}}<div class="alert info"><a href="/-/signin">Sign in with this device</a> to comment.</div>{{end}}
+{{end}}
+{{end}}

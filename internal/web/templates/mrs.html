@@ -1,0 +1,32 @@
+{{define "crumbs"}}<span class="sep">/</span><span>Merge requests</span>{{end}}
+{{define "content"}}
+<div class="toolbar"><h1 class="grow" style="margin:0">Merge requests</h1>{{if .Repo.CanWrite}}<a class="btn confirm" href="/{{.Repo.Path}}/-/merge_requests/new">New merge request</a>{{end}}</div>
+<div class="tabs">
+  <a class="{{if eq .Data.State "opened"}}active{{end}}" href="?state=opened">Open <span class="count">{{.Data.CountOpen}}</span></a>
+  <a class="{{if eq .Data.State "merged"}}active{{end}}" href="?state=merged">Merged <span class="count">{{.Data.CountMerged}}</span></a>
+  <a class="{{if eq .Data.State "closed"}}active{{end}}" href="?state=closed">Closed <span class="count">{{.Data.CountClosed}}</span></a>
+  <a class="{{if eq .Data.State "all"}}active{{end}}" href="?state=all">All</a>
+</div>
+<ul class="list card">
+{{range .Data.MRs}}
+  <li>
+    <div class="grow">
+      <a class="title" href="/{{$.Repo.Path}}/-/merge_requests/{{.Number}}">{{.Title}}</a>
+      <div class="meta">!{{.Number}} · opened {{timeago .Created}} by @{{.Author}} ·
+        {{if .SourceBranch}}<span class="mono">{{.SourceBranch}}</span>{{else}}<span class="pill agit" title="Opened by pushing to refs/for/{{.TargetBranch}}">pushed</span>{{end}} → <span class="mono">{{.TargetBranch}}</span>
+        {{if eq .State "merged"}}<span class="pill merged">merged</span>{{else if eq .State "closed"}}<span class="pill closed">closed</span>{{end}}
+      </div>
+    </div>
+    <span class="pill version">v{{len .Versions}}</span>
+    <span class="meta nowrap">💬 {{len .Comments}}</span>
+    <span class="meta nowrap">updated {{timeago .Updated}}</span>
+  </li>
+{{else}}
+  <li class="empty" style="display:block">No merge requests here.</li>
+{{end}}
+</ul>
+<div class="card"><div class="card-body">
+  <b>Open a merge request without a fork:</b> anyone with a write token can push a change for review.
+  <div class="codebox" style="margin-top:8px">git push origin HEAD:refs/for/{{.Repo.Default}} -o title="Short title" -o description="Why"</div>
+</div></div>
+{{end}}

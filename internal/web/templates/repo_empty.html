@@ -1,0 +1,19 @@
+{{define "content"}}
+{{template "projhead" .}}
+<div class="card"><div class="card-body">
+  <h2 style="margin-top:0">This repository is empty</h2>
+  <p class="muted">Push an existing project, or start fresh. Use a token from <a href="/-/device">This device</a> as the password.</p>
+  <h3>Push an existing folder</h3>
+  <div class="codebox">cd existing_folder
+git init -b main
+git remote add origin {{.Repo.CloneURL}}
+git add .
+git commit -m "Initial commit"
+git push -u origin main</div>
+  <h3>Push an existing repository</h3>
+  <div class="codebox">cd existing_repo
+git remote add origin {{.Repo.CloneURL}}
+git push -u origin --all
+git push -u origin --tags</div>
+</div></div>
+{{end}}

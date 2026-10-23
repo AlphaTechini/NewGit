@@ -1,0 +1,22 @@
+{{define "crumbs"}}<span class="sep">/</span><span>Branches</span>{{end}}
+{{define "content"}}
+<h1>Branches</h1>
+<ul class="list card">
+{{range .Data.Branches}}
+  <li>
+    <div class="grow">
+      <a class="title mono" href="/{{$.Repo.Path}}/-/tree/{{.Name}}">{{.Name}}</a>
+      {{if eq .Name $.Repo.Default}}<span class="pill neutral">default</span>{{end}}
+      <div class="meta"><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.Commit.OID}}">{{short .Commit.OID}}</a> {{.Commit.Subject}} · {{timeago .Commit.CommitDate}}</div>
+    </div>
+    {{if ne .Name $.Repo.Default}}<span class="meta nowrap" title="commits ahead / behind {{$.Repo.Default}}">{{.Ahead}} ahead · {{.Behind}} behind</span>{{end}}
+    {{$mr := index $.Data.MRs .Name}}
+    {{if $mr}}<a class="btn sm" href="/{{$.Repo.Path}}/-/merge_requests/{{$mr}}">!{{$mr}}</a>
+    {{else if and $.Repo.CanWrite (ne .Name $.Repo.Default) (gt .Ahead 0)}}<a class="btn sm" href="/{{$.Repo.Path}}/-/merge_requests/new?source={{.Name}}">Merge request</a>{{end}}
+    <a class="btn sm" href="/{{$.Repo.Path}}/-/commits/{{.Name}}">Commits</a>
+  </li>
+{{else}}
+  <li class="muted">No branches yet.</li>
+{{end}}
+</ul>
+{{end}}

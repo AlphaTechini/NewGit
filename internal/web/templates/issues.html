@@ -1,0 +1,24 @@
+{{define "crumbs"}}<span class="sep">/</span><span>Issues</span>{{end}}
+{{define "content"}}
+<div class="toolbar"><h1 class="grow" style="margin:0">Issues</h1>{{if .User}}<a class="btn confirm" href="/{{.Repo.Path}}/-/issues/new">New issue</a>{{else}}<a class="btn" href="/-/signin">Sign in to open an issue</a>{{end}}</div>
+<div class="tabs">
+  <a class="{{if eq .Data.State "opened"}}active{{end}}" href="?state=opened">Open <span class="count">{{.Data.CountOpen}}</span></a>
+  <a class="{{if eq .Data.State "closed"}}active{{end}}" href="?state=closed">Closed <span class="count">{{.Data.CountClosed}}</span></a>
+  <a class="{{if eq .Data.State "all"}}active{{end}}" href="?state=all">All</a>
+</div>
+<ul class="list card">
+{{range .Data.Issues}}
+  <li>
+    <div class="grow">
+      <a class="title" href="/{{$.Repo.Path}}/-/issues/{{.Number}}">{{.Title}}</a>
+      <div class="meta">#{{.Number}} · opened {{timeago .Created}} by @{{.Author}}{{if eq .State "closed"}} · <span class="pill closed">closed</span>{{end}}</div>
+    </div>
+    <span class="meta nowrap">💬 {{len .Comments}}</span>
+    <span class="meta nowrap">updated {{timeago .Updated}}</span>
+  </li>
+{{else}}
+  <li class="empty" style="display:block">No issues here.</li>
+{{end}}
+</ul>
+<p class="hint">Issues are stored in this repository as <span class="mono">refs/newgit/issues/N</span>. Fetch them with <span class="mono">git fetch origin '+refs/newgit/*:refs/newgit/*'</span>.</p>
+{{end}}

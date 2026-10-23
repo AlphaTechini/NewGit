@@ -1,0 +1,15 @@
+{{define "content"}}
+<h1>Create a project</h1>
+<form method="post" action="/-/new" class="card"><div class="card-body">
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+  <label>Project URL</label>
+  <div class="muted mono">{{.BaseURL}}/{{.User.Username}}/</div>
+  <label for="name">Project name</label>
+  <input type="text" id="name" name="name" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,63}" value="{{with .Data}}{{.Name}}{{end}}" placeholder="my-project" style="max-width:360px">
+  <p class="hint">Letters, digits, dots, dashes and underscores.</p>
+  <label for="description">Description (optional)</label>
+  <textarea id="description" name="description" maxlength="500" style="min-height:70px;max-width:640px">{{with .Data}}{{.Description}}{{end}}</textarea>
+  <label style="font-weight:normal"><input type="checkbox" name="readme" checked> Initialize repository with a README</label>
+  <div class="form-actions btn-row"><button class="btn confirm" type="submit">Create project</button><a class="btn" href="/">Cancel</a></div>
+</div></form>
+{{end}}

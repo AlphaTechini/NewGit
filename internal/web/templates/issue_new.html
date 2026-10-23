@@ -1,0 +1,12 @@
+{{define "crumbs"}}<span class="sep">/</span><a href="/{{.Repo.Path}}/-/issues">Issues</a><span class="sep">/</span><span>New</span>{{end}}
+{{define "content"}}
+<h1>New issue</h1>
+<form method="post" action="/{{.Repo.Path}}/-/issues/new" class="card"><div class="card-body">
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+  <label for="title">Title</label>
+  <input type="text" id="title" name="title" required maxlength="255" value="{{with .Data}}{{.Title}}{{end}}">
+  <label for="body">Description</label>
+  <textarea id="body" name="body" placeholder="Markdown supported">{{with .Data}}{{.Body}}{{end}}</textarea>
+  <div class="form-actions btn-row"><button class="btn confirm" type="submit">Create issue</button><a class="btn" href="/{{.Repo.Path}}/-/issues">Cancel</a></div>
+</div></form>
+{{end}}

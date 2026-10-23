@@ -1,0 +1,5 @@
+{{define "content"}}
+<div class="proj-head">{{template "avatar" (dict "Name" .Data.Profile.Username "Size" "lg")}}<div><h1>@{{.Data.Profile.Username}}</h1><div class="desc">Joined {{timeago .Data.Profile.Created}} · device-bound account</div></div></div>
+<h2>Projects</h2>
+{{template "projectlist" .Data.Repos}}
+{{end}}

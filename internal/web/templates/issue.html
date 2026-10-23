@@ -1,0 +1,45 @@
+{{define "crumbs"}}<span class="sep">/</span><a href="/{{.Repo.Path}}/-/issues">Issues</a><span class="sep">/</span><span>#{{.Data.Issue.Number}}</span>{{end}}
+{{define "content"}}
+{{$i := .Data.Issue}}
+<div class="issuable-head">
+  {{if eq $i.State "opened"}}<span class="pill opened">Open</span>{{else}}<span class="pill closed">Closed</span>{{end}}
+  <span>Issue created {{timeago $i.Created}} by</span> {{template "avatar" (dict "Name" $i.Author "Size" "")}} <b>@{{$i.Author}}</b>
+  <span class="grow"></span>
+  {{if .Data.CanState}}
+  <form method="post" action="/{{.Repo.Path}}/-/issues/{{$i.Number}}/state">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    {{if eq $i.State "opened"}}<input type="hidden" name="state" value="closed"><button class="btn" type="submit">Close issue</button>
+    {{else}}<input type="hidden" name="state" value="opened"><button class="btn" type="submit">Reopen issue</button>{{end}}
+  </form>
+  {{end}}
+</div>
+<div class="layout2">
+<div class="main">
+  <div class="issuable-title">{{$i.Title}}</div>
+  {{if $i.Body}}<div class="markdown">{{markdown $i.Body}}</div>{{else}}<p class="muted">No description.</p>{{end}}
+  <h2>Activity</h2>
+  <ul class="timeline">
+  {{range $i.Timeline}}
+    {{if eq .Kind "comment"}}<li><span class="dot">{{template "avatar" (dict "Name" .Actor "Size" "md")}}</span>{{template "note" .Comment}}</li>
+    {{else}}<li class="sys"><span class="dot"></span><b>@{{.Actor}}</b> {{.Kind}} this issue {{timeago .At}}</li>{{end}}
+  {{else}}
+    <li class="sys"><span class="dot"></span>No activity yet.</li>
+  {{end}}
+  </ul>
+  <a id="latest"></a>
+  {{if .User}}
+  <form method="post" action="/{{.Repo.Path}}/-/issues/{{$i.Number}}/comment" class="card"><div class="card-body">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <textarea name="body" required placeholder="Write a comment (Markdown supported)"></textarea>
+    <div class="form-actions btn-row"><button class="btn confirm" type="submit">Comment</button>
+    {{if and .Data.CanState (eq $i.State "opened")}}<button class="btn" type="submit" name="close" value="1">Comment &amp; close</button>{{end}}</div>
+  </div></form>
+  {{else}}<div class="alert info"><a href="/-/signin">Sign in with this device</a> to comment.</div>{{end}}
+</div>
+<aside class="side">
+  <div class="block"><div class="lbl">Author</div>@{{$i.Author}}</div>
+  <div class="block"><div class="lbl">Stored at</div><span class="mono">refs/newgit/issues/{{$i.Number}}</span></div>
+  <div class="block"><div class="lbl">Comments</div>{{len $i.Comments}}</div>
+</aside>
+</div>
+{{end}}

@@ -1,0 +1,10 @@
+{{define "content"}}
+<div class="toolbar"><h1 class="grow" style="margin:0">Projects</h1><a class="btn confirm" href="/-/new">New project</a></div>
+<div class="tabs"><a class="active" href="/">Yours <span class="count">{{len .Data.Mine}}</span></a><a href="/explore">All <span class="count">{{len .Data.All}}</span></a></div>
+{{if .Data.Mine}}{{template "projectlist" .Data.Mine}}{{else}}
+<div class="card empty">
+  <p>You don't have any projects yet.</p>
+  <a class="btn confirm" href="/-/new">Create your first project</a>
+</div>
+{{end}}
+{{end}}

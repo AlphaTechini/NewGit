@@ -1,0 +1,18 @@
+{{define "crumbs"}}<span class="sep">/</span><span>Push log</span>{{end}}
+{{define "content"}}
+<h1>Push log</h1>
+<p class="muted">Every ref change made through NewGit, with the authenticated account that made it. Stored in the repository itself at <span class="mono">refs/newgit/pushlog</span>, so commits can be traced to a real account even when their author line says something else.</p>
+<ul class="list card">
+{{range .Data.Pushes}}
+  <li>
+    {{template "avatar" (dict "Name" .By "Size" "md")}}
+    <div class="grow">
+      <div><b>@{{.By}}</b> <span class="muted">via {{.Via}} · {{timeago .At}} · {{len .Commits}} new commit{{if ne (len .Commits) 1}}s{{end}}</span></div>
+      {{range .Refs}}<div class="meta mono">{{.Ref}}: {{if isZeroOID .Old}}created{{else}}{{short .Old}}{{end}} → {{if isZeroOID .New}}deleted{{else}}<a href="/{{$.Repo.Path}}/-/commit/{{.New}}">{{short .New}}</a>{{end}}</div>{{end}}
+    </div>
+  </li>
+{{else}}
+  <li class="muted">No pushes recorded yet.</li>
+{{end}}
+</ul>
+{{end}}

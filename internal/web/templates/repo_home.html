@@ -1,0 +1,26 @@
+{{define "content"}}
+{{template "projhead" .}}
+<div class="toolbar">
+  {{template "refswitch" .}}
+  <span class="muted">{{len .Data.Tree.Branches}} branch{{if ne (len .Data.Tree.Branches) 1}}es{{end}}</span>
+  <span class="grow"></span>
+  <a class="btn" href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}">History</a>
+  {{if .User}}<a class="btn" href="/{{.Repo.Path}}/-/issues/new">New issue</a>{{end}}
+</div>
+{{template "filetable" (dict "Tree" .Data.Tree "RepoPath" .Repo.Path "Ref" .Repo.Ref "Parent" "")}}
+{{if .Data.Tree.Readme}}
+<div class="card" style="margin-top:16px">
+  <div class="card-header">{{template "icon-file"}} <b>{{.Data.Tree.Readme}}</b></div>
+  <div class="card-body markdown">{{.Data.Tree.ReadmeHTML}}</div>
+</div>
+{{end}}
+{{if .Data.Pushes}}
+<h2>Recent pushes</h2>
+<ul class="list card">
+{{range .Data.Pushes}}
+  <li>{{template "avatar" (dict "Name" .By "Size" "")}}<div class="grow"><b>@{{.By}}</b> <span class="muted">pushed {{len .Commits}} commit{{if ne (len .Commits) 1}}s{{end}} via {{.Via}} · {{timeago .At}}</span>
+  <div class="meta">{{range .Refs}}<span class="mono">{{trimPrefix .Ref "refs/heads/"}}</span> {{end}}</div></div></li>
+{{end}}
+</ul>
+{{end}}
+{{end}}

@@ -1,0 +1,106 @@
+{{define "avatar"}}<span class="avatar {{.Size}}{{if .Square}} sq{{end}}" style="background:hsl({{hue .Name}},45%,48%)" aria-hidden="true">{{initials .Name}}</span>{{end}}
+
+{{define "icon-folder"}}<svg class="ico" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1.5 3A1.5 1.5 0 0 1 3 1.5h3.1l1.5 1.5H13A1.5 1.5 0 0 1 14.5 4.5v8A1.5 1.5 0 0 1 13 14H3a1.5 1.5 0 0 1-1.5-1.5V3z"/></svg>{{end}}
+{{define "icon-file"}}<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M3.5 1.5h6l3 3v10h-9z"/><path d="M9.5 1.5v3h3"/></svg>{{end}}
+
+{{define "projectlist"}}
+{{if .}}
+<ul class="list card">
+{{range .}}
+  <li>
+    {{template "avatar" (dict "Name" .Name "Size" "md" "Square" true)}}
+    <div class="grow">
+      <a class="title" href="/{{.Path}}">{{.Owner}} / {{.Name}}</a>
+      {{if .Description}}<div class="meta">{{.Description}}</div>{{end}}
+    </div>
+    <span class="meta nowrap">created {{timeago .Created}}</span>
+  </li>
+{{end}}
+</ul>
+{{else}}
+<div class="card empty">No projects yet.</div>
+{{end}}
+{{end}}
+
+{{define "pusher"}}{{if .}}<span class="pill verified" title="Recorded by the server from an authenticated {{.Via}} push">✓ pushed by @{{.By}} via {{.Via}}</span>{{else}}<span class="pill neutral" title="No push-log entry for this commit">pusher unknown</span>{{end}}{{end}}
+
+{{define "diffs"}}
+{{range .}}
+<div class="diff-file">
+  <div class="fh">
+    <span class="path">{{.Path}}</span>
+    {{if ne .Status "modified"}}<span class="st {{.Status}}">{{.Status}}</span>{{end}}
+    <span class="stat-add">+{{.Additions}}</span><span class="stat-del">−{{.Deletions}}</span>
+  </div>
+  {{if .Binary}}<div class="card-body muted">Binary file changed.</div>
+  {{else if not .Hunks}}<div class="card-body muted">No content changes (mode or rename only).</div>
+  {{else}}
+  <table class="diff">
+  {{range .Hunks}}
+    <tr class="hunk"><td class="ln"></td><td class="ln"></td><td class="code">{{.Header}}</td></tr>
+    {{range .Lines}}<tr class="{{diffClass .Kind}}"><td class="ln">{{lineNo .OldNo}}</td><td class="ln">{{lineNo .NewNo}}</td><td class="code">{{.Content}}</td></tr>{{end}}
+  {{end}}
+  </table>
+  {{if .Truncated}}<div class="card-body muted">Diff truncated: this file has too many changed lines to show.</div>{{end}}
+  {{end}}
+</div>
+{{else}}
+<div class="card empty">No changes.</div>
+{{end}}
+{{end}}
+
+
+{{define "note"}}
+<div class="note">
+  <div class="note-head">{{template "avatar" (dict "Name" .Author "Size" "")}} <b>@{{.Author}}</b> commented {{timeago .At}}{{if .Version}} <span class="pill version">on v{{.Version}}</span>{{end}}</div>
+  <div class="note-body markdown">{{markdown .Body}}</div>
+</div>
+{{end}}
+
+{{define "projhead"}}
+<div class="proj-head">
+  {{template "avatar" (dict "Name" .Repo.Name "Size" "lg" "Square" true)}}
+  <div class="grow" style="flex:1"><h1>{{.Repo.Name}}</h1>{{if .Repo.Description}}<div class="desc">{{.Repo.Description}}</div>{{end}}</div>
+  <details class="dropdown">
+    <summary class="btn confirm">Code ▾</summary>
+    <div class="menu">
+      <div class="lbl"><b>Clone with HTTPS</b></div>
+      <div class="clone" style="margin:6px 0 10px"><input type="text" readonly id="cloneurl" value="{{.Repo.CloneURL}}"><button class="btn" type="button" data-copy="cloneurl">Copy</button></div>
+      <div class="hint">Push with a token from <a href="/-/device">This device</a> as the password.</div>
+      <div class="lbl" style="margin-top:10px"><b>Open a merge request by pushing</b></div>
+      <div class="codebox">git push origin HEAD:refs/for/{{.Repo.Default}} -o title="My change"</div>
+      <div class="lbl" style="margin-top:10px"><b>Fetch issues and review history too</b></div>
+      <div class="codebox">git fetch origin '+refs/newgit/*:refs/newgit/*'</div>
+    </div>
+  </details>
+</div>
+{{end}}
+
+{{define "refswitch"}}
+<details class="dropdown">
+  <summary class="btn">⑂ {{.Repo.Ref}} ▾</summary>
+  <div class="menu left">
+    {{range .Data.Tree.Branches}}<a class="opt" href="/{{$.Repo.Path}}/-/tree/{{.Name}}">{{.Name}}</a>{{end}}
+  </div>
+</details>
+{{end}}
+
+{{define "filetable"}}
+<div class="lastcommit">
+  {{with .Tree.LastCommit}}
+  {{template "avatar" (dict "Name" .AuthorName "Size" "")}}
+  <div class="grow"><a href="/{{$.RepoPath}}/-/commit/{{.OID}}" style="color:inherit"><b>{{.Subject}}</b></a> <span class="muted">· {{.AuthorName}} authored {{timeago .AuthorDate}}</span></div>
+  {{template "pusher" $.Tree.Pusher}}
+  <a class="sha" href="/{{$.RepoPath}}/-/commit/{{.OID}}">{{short .OID}}</a>
+  {{end}}
+</div>
+<table class="files">
+  {{if not .Tree.IsRoot}}<tr><td class="name" colspan="2"><a href="/{{.RepoPath}}/-/tree/{{.Ref}}/{{.Parent}}">..</a></td></tr>{{end}}
+  {{range .Tree.Entries}}
+  <tr>
+    <td class="name">{{if eq .Type "tree"}}<a href="/{{$.RepoPath}}/-/tree/{{$.Ref}}/{{.Path}}">{{template "icon-folder"}} {{.Name}}</a>{{else if eq .Type "commit"}}<span class="muted">{{template "icon-folder"}} {{.Name}} @ {{short .OID}} (submodule)</span>{{else}}<a href="/{{$.RepoPath}}/-/blob/{{$.Ref}}/{{.Path}}">{{template "icon-file"}} {{.Name}}</a>{{end}}</td>
+    <td class="size">{{if ge .Size 0}}{{size .Size}}{{end}}</td>
+  </tr>
+  {{end}}
+</table>
+{{end}}

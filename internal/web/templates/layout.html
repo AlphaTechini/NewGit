@@ -1,0 +1,53 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · NewGit</title>
+<link rel="stylesheet" href="/-/static/style.css">
+<link rel="stylesheet" href="/-/static/chroma.css">
+<script src="/-/static/device.js" defer></script>
+</head>
+<body data-signed-in="{{if .User}}1{{else}}0{{end}}">
+<header class="topbar">
+  <a class="logo" href="/"><span class="mark"></span>NewGit</a>
+  <a class="navlink" href="/explore">Explore</a>
+  <span class="spacer"></span>
+  {{if .User}}
+    <a class="btn sm" href="/-/new">+ New project</a>
+    <a class="userchip navlink" href="/-/device" title="This device">{{template "avatar" (dict "Name" .User.Username "Size" "")}} @{{.User.Username}}</a>
+    <form method="post" action="/-/signout" data-signout><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="btn sm" type="submit">Sign out</button></form>
+  {{else}}
+    <span class="muted" id="ng-device-hint"></span>
+    <a class="btn sm confirm" href="/-/signin">Sign in</a>
+  {{end}}
+</header>
+<div class="shell">
+  <aside class="sidebar">
+  {{if .Repo}}
+    <a class="proj" href="/{{.Repo.Path}}">{{template "avatar" (dict "Name" .Repo.Name "Size" "md" "Square" true)}} {{.Repo.Name}}</a>
+    <a class="item {{if eq .Nav "overview"}}active{{end}}" href="/{{.Repo.Path}}"><span>Project overview</span></a>
+    <div class="section">Code</div>
+    <a class="item {{if eq .Nav "files"}}active{{end}}" href="/{{.Repo.Path}}/-/tree/{{.Repo.Ref}}"><span>Repository</span></a>
+    <a class="item {{if eq .Nav "commits"}}active{{end}}" href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}"><span>Commits</span></a>
+    <a class="item {{if eq .Nav "branches"}}active{{end}}" href="/{{.Repo.Path}}/-/branches"><span>Branches</span></a>
+    <a class="item {{if eq .Nav "mrs"}}active{{end}}" href="/{{.Repo.Path}}/-/merge_requests"><span>Merge requests</span><span class="badge-count">{{.Repo.OpenMRs}}</span></a>
+    <a class="item {{if eq .Nav "pushes"}}active{{end}}" href="/{{.Repo.Path}}/-/pushes"><span>Push log</span></a>
+    <div class="section">Plan</div>
+    <a class="item {{if eq .Nav "issues"}}active{{end}}" href="/{{.Repo.Path}}/-/issues"><span>Issues</span><span class="badge-count">{{.Repo.OpenIssues}}</span></a>
+  {{else}}
+    <div class="section">Your work</div>
+    <a class="item {{if eq .Nav "home"}}active{{end}}" href="/"><span>Projects</span></a>
+    <a class="item {{if eq .Nav "explore"}}active{{end}}" href="/explore"><span>Explore</span></a>
+    {{if .User}}<a class="item {{if eq .Nav "device"}}active{{end}}" href="/-/device"><span>This device &amp; tokens</span></a>{{end}}
+  {{end}}
+  </aside>
+  <main class="content">
+    {{if .Repo}}<nav class="crumbs"><a href="/{{.Repo.Owner}}">{{.Repo.Owner}}</a><span class="sep">/</span><a href="/{{.Repo.Path}}">{{.Repo.Name}}</a>{{block "crumbs" .}}{{end}}</nav>{{end}}
+    {{if .Flash}}<div class="alert success">{{.Flash}}</div>{{end}}
+    {{if .Error}}<div class="alert danger">{{.Error}}</div>{{end}}
+    {{template "content" .}}
+  </main>
+</div>
+</body>
+</html>{{end}}

@@ -1,0 +1,23 @@
+{{define "crumbs"}}<span class="sep">/</span><span>Commits</span>{{end}}
+{{define "content"}}
+<div class="toolbar"><h1 class="grow" style="margin:0">Commits <span class="muted" style="font-weight:normal;font-size:15px">on <span class="mono">{{.Repo.Ref}}</span>{{if .Data.Path}} for <span class="mono">{{.Data.Path}}</span>{{end}}</span></h1></div>
+<ul class="list card">
+{{range .Data.Commits}}
+  <li>
+    {{template "avatar" (dict "Name" .AuthorName "Size" "md")}}
+    <div class="grow">
+      <a class="title" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{.Subject}}</a>
+      <div class="meta">{{.AuthorName}} authored {{timeago .AuthorDate}} {{template "pusher" .Pusher}}</div>
+    </div>
+    <a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{short .OID}}</a>
+    <a class="btn sm" href="/{{$.Repo.Path}}/-/tree/{{.OID}}" title="Browse files at this commit">Browse</a>
+  </li>
+{{else}}
+  <li class="muted">No commits.</li>
+{{end}}
+</ul>
+<div class="pager">
+  {{if gt .Data.Page 1}}<a class="btn" href="?page={{sub .Data.Page 1}}">← Newer</a>{{end}}
+  {{if .Data.More}}<a class="btn" href="?page={{add .Data.Page 1}}">Older →</a>{{end}}
+</div>
+{{end}}
