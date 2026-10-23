@@ -1,23 +1,18 @@
-{{define "crumbs"}}<span class="sep">/</span><a href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}">Commits</a><span class="sep">/</span><span class="mono">{{short .Data.Commit.OID}}</span>{{end}}
-{{define "content"}}
-{{$c := .Data.Commit}}
-<div class="issuable-head">
-  <span>Commit <span class="sha">{{short $c.OID}}</span> authored {{timeago $c.AuthorDate}} by</span>
-  {{template "avatar" (dict "Name" $c.AuthorName "Size" "")}} <b>{{$c.AuthorName}}</b>
-  <span class="grow"></span>
-  <a class="btn sm" href="/{{.Repo.Path}}/-/tree/{{$c.OID}}">Browse files</a>
-</div>
-<h1 style="margin-top:0">{{$c.Subject}}</h1>
-{{if $c.Body}}<pre class="codebox" style="white-space:pre-wrap">{{$c.Body}}</pre>{{end}}
-<div class="card"><div class="card-body">
-<dl class="kv">
-  <dt>Author</dt><dd>{{$c.AuthorName}} &lt;{{$c.AuthorEmail}}&gt; · {{datetime $c.AuthorDate}}</dd>
-  <dt>Committer</dt><dd>{{$c.CommitterName}} &lt;{{$c.CommitterEmail}}&gt; · {{datetime $c.CommitDate}}</dd>
-  <dt>Pushed by</dt><dd>{{with .Data.Pusher}}<span class="pill verified">✓ @{{.By}}</span> <span class="muted">via {{.Via}}, {{datetime .At}}. Recorded by the server from an authenticated push; author names above are whatever the commit claims.</span>{{else}}<span class="pill neutral">unknown</span> <span class="muted">no push-log entry (e.g. imported before NewGit recorded pushes)</span>{{end}}</dd>
-  <dt>Parents</dt><dd>{{range $c.Parents}}<a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.}}">{{short .}}</a> {{else}}<span class="muted">root commit</span>{{end}}</dd>
-  <dt>Commit</dt><dd class="mono">{{$c.OID}}</dd>
-</dl>
-</div></div>
-<p class="muted">{{len .Data.Diffs}} file{{if ne (len .Data.Diffs) 1}}s{{end}} changed, <span class="stat-add">+{{.Data.Adds}}</span> <span class="stat-del">−{{.Data.Dels}}</span></p>
-{{template "diffs" .Data.Diffs}}
+{{define "crumbs"}}<li><a href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}">Commits</a></li><li aria-current="page"><span class="mono">{{short .Data.Commit.OID}}</span></li>{{end}}
+{{define "content"}}{{$c := .Data.Commit}}
+<header class="issuable">
+  <div class="issuable-head"><div class="grow"><h1 class="issuable-title">{{$c.Subject}}</h1></div>
+    <div class="issuable-actions"><a class="btn sm" href="/{{.Repo.Path}}/-/tree/{{$c.OID}}">{{template "icon" "code"}}Browse files</a></div></div>
+  <div class="issuable-meta">{{template "avatar" (dict "Name" $c.AuthorName "Size" "sm")}}<span class="who">{{$c.AuthorName}}</span> authored {{template "time" $c.AuthorDate}}<span class="sep-dot"></span><span class="sha">{{short $c.OID}}</span></div>
+</header>
+{{with $c.Body}}<pre class="codebox wrap mb-0" style="margin-bottom:20px">{{.}}</pre>{{end}}
+<div class="card"><div class="card-body"><dl class="kv">
+  <dt>Pushed by</dt><dd>{{with .Data.Pusher}}{{template "pusher" .}} <span class="muted">via {{.Via}}, {{template "time" .At}}. Recorded by the server from an authenticated push. The author below is whatever the commit claims.</span>{{else}}<span class="unverified">Pusher unknown</span> <span class="muted">No push-log entry, for example history imported before NewGit recorded pushes.</span>{{end}}</dd>
+  <dt>Author</dt><dd>{{$c.AuthorName}} <span class="muted">&lt;{{$c.AuthorEmail}}&gt;</span><span class="sep-dot"></span>{{datetime $c.AuthorDate}}</dd>
+  <dt>Committer</dt><dd>{{$c.CommitterName}} <span class="muted">&lt;{{$c.CommitterEmail}}&gt;</span><span class="sep-dot"></span>{{datetime $c.CommitDate}}</dd>
+  <dt>Parents</dt><dd>{{range $c.Parents}}<a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.}}">{{short .}}</a> {{else}}<span class="muted">Root commit</span>{{end}}</dd>
+  <dt>Commit</dt><dd><span class="mono" id="fullsha">{{$c.OID}}</span> {{template "copybtn" "fullsha"}}</dd>
+</dl></div></div>
+<div class="section-head"><h2 class="section-title">Changes</h2></div>
+{{template "diffview" (dict "Diffs" .Data.Diffs "RepoPath" .Repo.Path "Rev" $c.OID "Empty" "This commit changes no file content.")}}
 {{end}}

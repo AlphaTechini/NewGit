@@ -1,11 +1,18 @@
-{{define "crumbs"}}<span class="sep">/</span><span>Tags</span>{{end}}
+{{define "crumbs"}}<li aria-current="page">Tags</li>{{end}}
 {{define "content"}}
-<h1>Tags</h1>
-<ul class="list card">
-{{range .Data.Tags}}
-  <li><a class="title mono" href="/{{$.Repo.Path}}/-/tree/{{.Name}}">{{.Name}}</a> <a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{short .OID}}</a> {{.Subject}} · {{timeago .Date}}</li>
-{{else}}
-  <li class="muted">No tags yet.</li>
-{{end}}
-</ul>
+<div class="page-head"><div><h1 class="page-title">Tags</h1><p class="page-desc">Named points in history, newest first.</p></div></div>
+{{if .Data.Tags}}<ul class="list card dense">
+{{range .Data.Tags}}<li>
+  {{template "iconc" (dict "N" "tag" "C" "list-icon")}}
+  <div class="grow"><a class="title mono" href="/{{$.Repo.Path}}/-/tree/{{.Name}}">{{.Name}}</a>
+    <div class="meta">{{.Subject}}<span class="sep-dot"></span>{{template "time" .Date}}</div></div>
+  <div class="end"><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{short .OID}}</a>
+    <a class="btn sm ghost icon" href="/{{$.Repo.Path}}/-/tree/{{.Name}}" aria-label="Browse files at {{.Name}}" title="Browse files">{{template "icon" "code"}}</a></div>
+</li>{{end}}</ul>
+{{else}}<div class="card"><div class="blank compact">
+  <div class="blank-art" aria-hidden="true">{{template "icon" "tag"}}</div>
+  <h2 class="blank-title">No tags yet</h2>
+  <p class="blank-text">Tags mark releases and other points worth naming. Create one locally and push it.</p>
+  {{template "codebox" (dict "ID" "tag-cmd" "Code" "git tag -a v1.0 -m \"First release\"\ngit push origin v1.0")}}
+</div></div>{{end}}
 {{end}}

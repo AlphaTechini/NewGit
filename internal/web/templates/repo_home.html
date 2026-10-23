@@ -1,26 +1,32 @@
 {{define "content"}}
 {{template "projhead" .}}
-<div class="toolbar">
-  {{template "refswitch" .}}
-  <span class="muted">{{len .Data.Tree.Branches}} branch{{if ne (len .Data.Tree.Branches) 1}}es{{end}}</span>
-  <span class="grow"></span>
-  <a class="btn" href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}">History</a>
-  {{if .User}}<a class="btn" href="/{{.Repo.Path}}/-/issues/new">New issue</a>{{end}}
+<div class="cols">
+  <div>
+    <div class="toolbar">
+      {{template "refswitch" .}}
+      <a class="btn sm ghost" href="/{{.Repo.Path}}/-/branches">{{template "icon" "branch"}}{{.Repo.BranchCount}} branch{{if ne .Repo.BranchCount 1}}es{{end}}</a>
+      <a class="btn sm ghost hide-sm" href="/{{.Repo.Path}}/-/tags">{{template "icon" "tag"}}{{.Repo.TagCount}} tag{{if ne .Repo.TagCount 1}}s{{end}}</a>
+      <span class="spacer"></span>
+      <a class="btn sm" href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}">{{template "icon" "history"}}History</a>
+    </div>
+    {{template "filetable" (dict "Tree" .Data.Tree "RepoPath" .Repo.Path "Ref" .Repo.Ref "Parent" "")}}
+    {{with .Data.Tree.Readme}}<div class="card mt-6">
+  <div class="card-header">{{template "icon" "book"}}<span class="card-title">{{$.Data.Tree.Readme}}</span></div>
+  {{if eq (printf "%T" $.Data.Tree.ReadmeHTML) "string"}}<pre class="readme-plain">{{$.Data.Tree.ReadmeHTML}}</pre>
+  {{else}}<div class="card-body"><div class="markdown">{{$.Data.Tree.ReadmeHTML}}</div></div>{{end}}
+</div>{{end}}
+  </div>
+  <aside class="meta-side" aria-label="About this project">
+    <div class="meta-block"><div class="meta-label">About</div>
+      <p class="meta-value">{{with .Repo.Description}}{{.}}{{else}}<span class="muted">No description.</span>{{end}}</p>
+      <div class="meta-row">{{template "icon" "user"}}<a href="/{{.Repo.Owner}}">@{{.Repo.Owner}}</a></div>
+      <div class="meta-row">{{template "icon" "clock"}}Created {{template "time" .Repo.Created}}</div></div>
+    <div class="meta-block"><div class="meta-label">Collaboration data</div>
+      <p class="muted">Issues and reviews are stored in this repository. Fetch them with git.</p>
+      {{template "codebox" (dict "ID" "about-fetch" "Code" "git fetch origin '+refs/newgit/*:refs/newgit/*'")}}</div>
+    {{if .Data.Pushes}}<div class="meta-block"><div class="meta-label">Recent pushes</div>
+      {{range .Data.Pushes}}<div class="meta-row" style="align-items:flex-start;margin-top:10px">{{template "avatar" (dict "Name" .By "Size" "sm")}}<div class="grow"><b>@{{.By}}</b> <span class="muted">pushed {{len .Commits}} commit{{if ne (len .Commits) 1}}s{{end}}</span><div class="muted xsmall">{{range .Refs}}<span class="mono">{{trimPrefix .Ref "refs/heads/"}}</span> {{end}}<span class="sep-dot"></span>{{template "time" .At}}</div></div></div>{{end}}
+      <a class="small" href="/{{.Repo.Path}}/-/pushes">View push log</a></div>{{end}}
+  </aside>
 </div>
-{{template "filetable" (dict "Tree" .Data.Tree "RepoPath" .Repo.Path "Ref" .Repo.Ref "Parent" "")}}
-{{if .Data.Tree.Readme}}
-<div class="card" style="margin-top:16px">
-  <div class="card-header">{{template "icon-file"}} <b>{{.Data.Tree.Readme}}</b></div>
-  <div class="card-body markdown">{{.Data.Tree.ReadmeHTML}}</div>
-</div>
-{{end}}
-{{if .Data.Pushes}}
-<h2>Recent pushes</h2>
-<ul class="list card">
-{{range .Data.Pushes}}
-  <li>{{template "avatar" (dict "Name" .By "Size" "")}}<div class="grow"><b>@{{.By}}</b> <span class="muted">pushed {{len .Commits}} commit{{if ne (len .Commits) 1}}s{{end}} via {{.Via}} · {{timeago .At}}</span>
-  <div class="meta">{{range .Refs}}<span class="mono">{{trimPrefix .Ref "refs/heads/"}}</span> {{end}}</div></div></li>
-{{end}}
-</ul>
-{{end}}
 {{end}}

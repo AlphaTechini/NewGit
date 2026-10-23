@@ -1,19 +1,16 @@
+{{define "pageclass"}}medium{{end}}
 {{define "content"}}
 {{template "projhead" .}}
-<div class="card"><div class="card-body">
-  <h2 style="margin-top:0">This repository is empty</h2>
-  <p class="muted">Push an existing project, or start fresh. Use a token from <a href="/-/device">This device</a> as the password.</p>
-  <h3>Push an existing folder</h3>
-  <div class="codebox">cd existing_folder
-git init -b main
-git remote add origin {{.Repo.CloneURL}}
-git add .
-git commit -m "Initial commit"
-git push -u origin main</div>
-  <h3>Push an existing repository</h3>
-  <div class="codebox">cd existing_repo
-git remote add origin {{.Repo.CloneURL}}
-git push -u origin --all
-git push -u origin --tags</div>
+<div class="card"><div class="blank">
+  <div class="blank-art accent" aria-hidden="true">{{template "icon" "push"}}</div>
+  <h2 class="blank-title">This repository is empty</h2>
+  <p class="blank-text">Push an existing project or start a new one. When git asks for a password, use a token from <a href="/-/device">This device</a>.</p>
+  <div class="blank-actions"><a class="btn primary" href="/-/device">{{template "icon" "key"}}Get a token</a></div>
 </div></div>
+<div class="section-head"><h2 class="section-title">Clone URL</h2></div>
+{{template "codebox" (dict "ID" "clone-url" "Code" .Repo.CloneURL)}}
+<div class="section-head"><h2 class="section-title">Create a new repository</h2></div>
+{{template "codebox" (dict "ID" "push-folder" "Code" (printf "cd existing_folder\ngit init -b main\ngit remote add origin %s\ngit add .\ngit commit -m \"Initial commit\"\ngit push -u origin main" .Repo.CloneURL))}}
+<div class="section-head"><h2 class="section-title">Push an existing repository</h2></div>
+{{template "codebox" (dict "ID" "push-repo" "Code" (printf "cd existing_repo\ngit remote add origin %s\ngit push -u origin --all\ngit push -u origin --tags" .Repo.CloneURL))}}
 {{end}}
