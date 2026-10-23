@@ -1,7 +1,34 @@
 {{define "content"}}
-<div class="toolbar"><h1 class="grow" style="margin:0">Explore projects</h1>{{if .User}}<a class="btn confirm" href="/-/new">New project</a>{{end}}</div>
 {{if not .User}}
-<div class="alert info">NewGit is a small Git host where <b>your device is your account</b>: no passwords, no email. Everyone can browse and clone. <a href="/-/signin">Sign in with this device</a> to create projects, open issues and merge requests.</div>
+<section class="hero">
+  <div>
+    <span class="eyebrow">{{template "icon" "database"}}Git is the database</span>
+    <h1>A Git host where your device is your account</h1>
+    <p class="lead">Push to open a merge request, review every version with range-diff, and see who really pushed each commit. No passwords, no email.</p>
+    <div class="hero-actions">
+      <a class="btn lg primary" href="/-/signin">{{template "icon" "key"}}Sign in with this device</a>
+      <a class="btn lg" href="#projects">Browse projects</a>
+    </div>
+    <p class="hero-note">Anyone can browse and clone. Signing in creates a key in this browser.</p>
+  </div>
+  <div class="term">
+    <div class="term-head">{{template "icon" "terminal"}}Propose a change, no fork</div>
+    <pre><span class="p">$ </span>git push origin HEAD:refs/for/main -o title="Fix login"
+<span class="o">remote: </span><span class="ok">Created merge request !3</span>
+<span class="o">remote: </span><span class="hl">{{.BaseURL}}/alice/project/-/merge_requests/3</span>
+<span class="p">$ </span>git commit --amend &amp;&amp; git push origin HEAD:refs/for/main -o topic=fix-login
+<span class="o">remote: </span><span class="ok">Updated merge request !3 to version 2</span></pre>
+  </div>
+</section>
+<div class="features">
+  <div class="feature"><span class="feature-icon">{{template "icon" "key"}}</span><h3>No passwords</h3><p>Your browser makes a key that cannot be copied out. That device is your account.</p></div>
+  <div class="feature"><span class="feature-icon">{{template "icon" "versions"}}</span><h3>Every push is a version</h3><p>Merge requests keep v1, v2, v3. Compare any two with range-diff.</p></div>
+  <div class="feature"><span class="feature-icon">{{template "icon" "shield-check"}}</span><h3>Verified pusher</h3><p>Commit pages show who actually pushed, next to the author the commit claims.</p>{{template "codebox" (dict "ID" "f-fetch" "Code" "git fetch origin '+refs/newgit/*:refs/newgit/*'")}}</div>
+</div>
+<div class="section-head" id="projects"><h2 class="section-title">Projects</h2></div>
+{{else}}
+<div class="page-head"><div><h1 class="page-title">Explore</h1><p class="page-desc">Every project on this server. Anyone can browse and clone.</p></div>
+  <div class="page-actions"><a class="btn primary" href="/-/new">{{template "icon" "plus"}}New project</a></div></div>
 {{end}}
 {{template "projectlist" .Data.All}}
 {{end}}

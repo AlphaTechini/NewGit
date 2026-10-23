@@ -1,10 +1,16 @@
 {{define "content"}}
-<div class="toolbar"><h1 class="grow" style="margin:0">Projects</h1><a class="btn confirm" href="/-/new">New project</a></div>
-<div class="tabs"><a class="active" href="/">Yours <span class="count">{{len .Data.Mine}}</span></a><a href="/explore">All <span class="count">{{len .Data.All}}</span></a></div>
+<div class="page-head"><div><h1 class="page-title">Your projects</h1><p class="page-desc">Projects you own, most recently active first.</p></div>
+  <div class="page-actions"><a class="btn primary" href="/-/new">{{template "icon" "plus"}}New project</a></div></div>
+<nav class="tabs" aria-label="Project lists">
+  <a href="/" aria-current="page">Yours <span class="count">{{len .Data.Mine}}</span></a>
+  <a href="/explore">All projects <span class="count">{{len .Data.All}}</span></a>
+</nav>
 {{if .Data.Mine}}{{template "projectlist" .Data.Mine}}{{else}}
-<div class="card empty">
-  <p>You don't have any projects yet.</p>
-  <a class="btn confirm" href="/-/new">Create your first project</a>
-</div>
+<div class="card"><div class="blank">
+  <div class="blank-art accent" aria-hidden="true">{{template "icon" "files"}}</div>
+  <h2 class="blank-title">Create your first project</h2>
+  <p class="blank-text">A project is a Git repository with merge requests and issues. Everything, including issues, lives in Git.</p>
+  <div class="blank-actions"><a class="btn primary" href="/-/new">{{template "icon" "plus"}}New project</a><a class="btn" href="/explore">Explore projects</a></div>
+</div></div>
 {{end}}
 {{end}}

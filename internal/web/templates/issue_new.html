@@ -1,12 +1,11 @@
-{{define "crumbs"}}<span class="sep">/</span><a href="/{{.Repo.Path}}/-/issues">Issues</a><span class="sep">/</span><span>New</span>{{end}}
+{{define "crumbs"}}<li><a href="/{{.Repo.Path}}/-/issues">Issues</a></li><li aria-current="page">New</li>{{end}}
+{{define "pageclass"}}narrow{{end}}
 {{define "content"}}
-<h1>New issue</h1>
+<div class="page-head"><div><h1 class="page-title">New issue</h1></div></div>
 <form method="post" action="/{{.Repo.Path}}/-/issues/new" class="card"><div class="card-body">
   <input type="hidden" name="csrf" value="{{.CSRF}}">
-  <label for="title">Title</label>
-  <input type="text" id="title" name="title" required maxlength="255" value="{{with .Data}}{{.Title}}{{end}}">
-  <label for="body">Description</label>
-  <textarea id="body" name="body" placeholder="Markdown supported">{{with .Data}}{{.Body}}{{end}}</textarea>
-  <div class="form-actions btn-row"><button class="btn confirm" type="submit">Create issue</button><a class="btn" href="/{{.Repo.Path}}/-/issues">Cancel</a></div>
+  <div class="field"><label for="title">Title</label><input type="text" id="title" name="title" required maxlength="255" value="{{with .Data}}{{.Title}}{{end}}" autofocus></div>
+  <div class="field"><label for="body">Description <span class="optional">(optional)</span></label><textarea id="body" name="body" placeholder="Steps, expected and actual behavior. Markdown is supported." aria-describedby="body-hint" style="min-height:200px">{{with .Data}}{{.Body}}{{end}}</textarea><p class="hint" id="body-hint">Markdown works here: headings, lists, code blocks and links.</p></div>
+  <div class="form-actions"><button class="btn primary" type="submit">Create issue</button><a class="btn ghost" href="/{{.Repo.Path}}/-/issues">Cancel</a><p class="hint">Stored as <span class="mono">refs/newgit/issues/N</span></p></div>
 </div></form>
 {{end}}
