@@ -1,32 +1,31 @@
-{{define "crumbs"}}<span class="sep">/</span><span>Merge requests</span>{{end}}
+{{define "crumbs"}}<li aria-current="page">Merge requests</li>{{end}}
 {{define "content"}}
-<div class="toolbar"><h1 class="grow" style="margin:0">Merge requests</h1>{{if .Repo.CanWrite}}<a class="btn confirm" href="/{{.Repo.Path}}/-/merge_requests/new">New merge request</a>{{end}}</div>
-<div class="tabs">
-  <a class="{{if eq .Data.State "opened"}}active{{end}}" href="?state=opened">Open <span class="count">{{.Data.CountOpen}}</span></a>
-  <a class="{{if eq .Data.State "merged"}}active{{end}}" href="?state=merged">Merged <span class="count">{{.Data.CountMerged}}</span></a>
-  <a class="{{if eq .Data.State "closed"}}active{{end}}" href="?state=closed">Closed <span class="count">{{.Data.CountClosed}}</span></a>
-  <a class="{{if eq .Data.State "all"}}active{{end}}" href="?state=all">All</a>
-</div>
-<ul class="list card">
-{{range .Data.MRs}}
-  <li>
-    <div class="grow">
-      <a class="title" href="/{{$.Repo.Path}}/-/merge_requests/{{.Number}}">{{.Title}}</a>
-      <div class="meta">!{{.Number}} · opened {{timeago .Created}} by @{{.Author}} ·
-        {{if .SourceBranch}}<span class="mono">{{.SourceBranch}}</span>{{else}}<span class="pill agit" title="Opened by pushing to refs/for/{{.TargetBranch}}">pushed</span>{{end}} → <span class="mono">{{.TargetBranch}}</span>
-        {{if eq .State "merged"}}<span class="pill merged">merged</span>{{else if eq .State "closed"}}<span class="pill closed">closed</span>{{end}}
-      </div>
-    </div>
-    <span class="pill version">v{{len .Versions}}</span>
-    <span class="meta nowrap">💬 {{len .Comments}}</span>
-    <span class="meta nowrap">updated {{timeago .Updated}}</span>
-  </li>
+<div class="page-head"><div><h1 class="page-title">Merge requests</h1><p class="page-desc">Versioned proposals. Every push is kept as a version you can compare.</p></div>
+  <div class="page-actions">{{if .Repo.CanWrite}}<a class="btn primary" href="/{{.Repo.Path}}/-/merge_requests/new">{{template "icon" "plus"}}New merge request</a>{{end}}</div></div>
+<nav class="tabs" aria-label="Merge request state">
+  <a href="?state=opened"{{if eq .Data.State "opened"}} aria-current="page"{{end}}>{{template "icon" "mr"}}Open <span class="count">{{.Data.CountOpen}}</span></a>
+  <a href="?state=merged"{{if eq .Data.State "merged"}} aria-current="page"{{end}}>{{template "icon" "merge"}}Merged <span class="count">{{.Data.CountMerged}}</span></a>
+  <a href="?state=closed"{{if eq .Data.State "closed"}} aria-current="page"{{end}}>{{template "icon" "mr-closed"}}Closed <span class="count">{{.Data.CountClosed}}</span></a>
+  <a href="?state=all"{{if eq .Data.State "all"}} aria-current="page"{{end}}>All</a>
+</nav>
+{{if .Data.MRs}}<ul class="list linked card">
+{{range .Data.MRs}}<li>
+  {{template "stateicon" (dict "Kind" "mr" "State" .State)}}
+  <div class="grow"><a class="title" href="/{{$.Repo.Path}}/-/merge_requests/{{.Number}}">{{.Title}}</a>
+    <div class="meta">!{{.Number}} opened {{template "time" .Created}} by @{{.Author}}<span class="sep-dot"></span>{{if .SourceBranch}}<span class="ref">{{.SourceBranch}}</span>{{else}}<span class="pill agit" title="Opened by pushing to refs/for/{{.TargetBranch}}">AGit</span> <span class="ref">{{.Topic}}</span>{{end}} {{template "iconc" (dict "N" "arrow-right" "C" "xs")}} <span class="ref">{{.TargetBranch}}</span>{{if eq .State "merged"}} <span class="pill merged">merged</span>{{end}}</div></div>
+  <div class="end"><span class="pill version" title="{{len .Versions}} version{{if ne (len .Versions) 1}}s{{end}}">v{{len .Versions}}</span>{{with len .Comments}}<span class="stat" title="{{.}} comment{{if ne . 1}}s{{end}}">{{template "icon" "comment"}}{{.}}</span>{{end}}<span class="hide-sm">Updated {{template "time" .Updated}}</span></div>
+</li>{{end}}</ul>
 {{else}}
-  <li class="empty" style="display:block">No merge requests here.</li>
-{{end}}
-</ul>
-<div class="card"><div class="card-body">
-  <b>Open a merge request without a fork:</b> anyone with a write token can push a change for review.
-  <div class="codebox" style="margin-top:8px">git push origin HEAD:refs/for/{{.Repo.Default}} -o title="Short title" -o description="Why"</div>
+<div class="card"><div class="blank compact">
+  <div class="blank-art" aria-hidden="true">{{template "icon" "mr"}}</div>
+  <h2 class="blank-title">{{if eq .Data.State "merged"}}Nothing merged yet{{else if eq .Data.State "closed"}}No closed merge requests{{else if eq .Data.State "all"}}No merge requests yet{{else}}No open merge requests{{end}}</h2>
+  <p class="blank-text">Anyone with a token can propose a change by pushing. No fork needed.</p>
+  {{if .Repo.CanWrite}}<div class="blank-actions"><a class="btn primary" href="/{{.Repo.Path}}/-/merge_requests/new">New merge request</a></div>{{end}}
+  {{template "codebox" (dict "ID" "mr-empty-agit" "Code" (printf "git push origin HEAD:refs/for/%s -o title=\"Short title\"" .Repo.Default))}}
 </div></div>
+{{end}}
+{{if .Data.MRs}}<div class="card mt-6"><div class="card-header">{{template "icon" "push"}}<span class="card-title">Propose a change without a fork</span></div><div class="card-body">
+  <p class="muted">Push to <span class="mono">refs/for/{{.Repo.Default}}</span> to open a merge request. Push again with the same topic to add a version.</p>
+  {{template "codebox" (dict "ID" "mr-agit" "Code" (printf "git push origin HEAD:refs/for/%s -o title=\"Short title\" -o description=\"Why\"\n# after amending or rebasing:\ngit push origin HEAD:refs/for/%s -o topic=<topic>" .Repo.Default .Repo.Default))}}
+</div></div>{{end}}
 {{end}}
