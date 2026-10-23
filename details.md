@@ -61,7 +61,7 @@ This is the same proof-of-possession pattern as Google's Device Bound Session Cr
   - `refs/merge-requests/N/head`, `refs/merge-requests/N/vK`: MR code versions.
   - `refs/newgit/issues/N`, `refs/newgit/mr/N`, `refs/newgit/pushlog`: op-logs.
 - **Web UI:** server-rendered `html/template` with a GitLab-style layout (top bar plus a project sidebar), chroma for syntax highlighting, and goldmark for Markdown (raw HTML disabled). The only JavaScript is device sign-in.
-- **MCP:** the official Go SDK (`github.com/modelcontextprotocol/go-sdk`) serves streamable HTTP at `/mcp`, authenticated with a personal access token as a Bearer token.
+- **MCP:** streamable HTTP at `/mcp` (JSON-RPC 2.0: `initialize`, `tools/list`, `tools/call`, `ping`), authenticated with a personal access token as a Bearer token. It is a small hand-written handler (no SDK) so the build needs no `golang.org/x` modules and stays on Go 1.24; tool input schemas are generated from Go structs.
 
 ## Sources
 
@@ -76,4 +76,4 @@ This is the same proof-of-possession pattern as Google's Device Bound Session Cr
 - DBSC in Chrome 146: https://helpnetsecurity.com/2026/04/10/google-chrome-device-bound-session-credentials
 - WebCrypto generateKey: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey
 - Go net/http/cgi chunked bodies: https://github.com/golang/go/blob/master/src/net/http/cgi/host.go
-- MCP Go SDK: https://github.com/modelcontextprotocol/go-sdk
+- MCP transports (streamable HTTP): https://modelcontextprotocol.io/specification/2025-06-18/basic/transports

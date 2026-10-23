@@ -67,7 +67,7 @@ Scope key: **MVP** ships in the first version. **Later** is designed for but not
 | ID | Requirement | Scope |
 |---|---|---|
 | P1 | Streamable HTTP at `/mcp`, Bearer token auth. | MVP |
-| P2 | Tools: `whoami`, `list_repos`, `create_repo`, `list_branches`, `list_tree`, `read_file`, `list_commits`, `get_commit`, `list_issues`, `get_issue`, `create_issue`, `comment_issue`, `set_issue_state`, `list_merge_requests`, `get_merge_request`, `get_merge_request_diff`, `get_merge_request_range_diff`, `comment_merge_request`, `merge_merge_request`, `set_merge_request_state`, `commit_files` (owner: commit straight to a branch), `propose_change` (anyone: commit on top of a target and open an MR, same path as AGit). | MVP |
+| P2 | Tools: `whoami`, `list_repos`, `create_repo`, `list_branches`, `list_tree`, `read_file`, `list_commits`, `get_commit`, `list_issues`, `get_issue`, `create_issue`, `comment_issue`, `set_issue_state`, `list_merge_requests`, `get_merge_request`, `create_merge_request`, `get_merge_request_diff`, `get_merge_request_range_diff`, `comment_merge_request`, `merge_merge_request`, `set_merge_request_state`, `commit_files` (owner: commit straight to a branch), `propose_change` (anyone: commit on top of a target and open an MR, same path as AGit). | MVP |
 | P3 | Permissions are the same as the web UI's: read is open to all, writes need the right role. | MVP |
 
 ## 7. Storage and operations
