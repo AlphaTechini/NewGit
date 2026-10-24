@@ -1,0 +1,54 @@
+{{define "layout"}}<!doctype html>
+<html lang="en"{{with .Theme}} data-theme="{{.}}"{{end}}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="{{if eq .Theme "dark"}}dark{{else if eq .Theme "light"}}light{{else}}light dark{{end}}">
+<title>{{.Title}} · NewGit</title>
+<link rel="preload" href="/-/static/fonts/InterVariable-4.1.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/-/static/style.css">
+<link rel="stylesheet" href="/-/static/chroma.css">
+<link rel="icon" href="/-/static/favicon.svg" type="image/svg+xml">
+<script src="/-/static/device.js" defer></script>
+</head>
+<body data-signed-in="{{if .User}}1{{else}}0{{end}}">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="/">{{template "logo"}}<span>NewGit</span></a>
+  <nav class="topnav" aria-label="Main">
+    {{if .User}}<a href="/"{{if eq .Nav "home"}} aria-current="page"{{end}}>Projects</a>{{end}}
+    <a href="/explore"{{if eq .Nav "explore"}} aria-current="page"{{end}}>Explore</a>
+  </nav>
+  <div class="top-actions">
+    {{if not .User}}<span class="device-hint hide-sm" id="ng-device-hint"></span>{{end}}
+    {{template "thememenu" .}}
+    {{if .User}}
+    <a class="btn sm" href="/-/new" aria-label="New project">{{template "icon" "plus"}}<span class="label-sm-hide">New project</span></a>
+    {{template "usermenu" .}}
+    {{else}}
+    <a class="btn sm primary" href="/-/signin">Sign in</a>
+    {{end}}
+  </div>
+</header>
+<div class="shell{{if not .Repo}} no-side{{end}}">
+  {{if .Repo}}{{template "sidebar" .}}{{end}}
+  <main class="panel" id="main" tabindex="-1">
+    {{if .Repo}}
+    <div class="panel-head">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol>
+        <li><a href="/{{.Repo.Owner}}">{{.Repo.Owner}}</a></li>
+        <li><a href="/{{.Repo.Path}}"{{if eq .Nav "overview"}} aria-current="page"{{end}}>{{.Repo.Name}}</a></li>
+        {{block "crumbs" .}}{{end}}
+      </ol></nav>
+      {{template "clonemenu" .}}
+    </div>
+    {{end}}
+    <div class="page {{block "pageclass" .}}{{end}}">
+      {{if .Flash}}<div class="alert success" role="status">{{template "icon" "check-circle"}}<div class="alert-body">{{.Flash}}</div></div>{{end}}
+      {{if .Error}}<div class="alert danger" role="alert">{{template "icon" "alert"}}<div class="alert-body">{{.Error}}</div></div>{{end}}
+      {{template "content" .}}
+    </div>
+  </main>
+</div>
+</body>
+</html>{{end}}

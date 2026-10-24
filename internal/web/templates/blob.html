@@ -1,0 +1,36 @@
+{{define "crumbs"}}<li><a href="/{{.Repo.Path}}/-/tree/{{.Repo.Ref}}" class="mono">{{.Repo.Ref}}</a></li>{{$n := len (crumbs .Data.Path)}}{{range $i, $c := crumbs .Data.Path}}<li{{if eq (add $i 1) $n}} aria-current="page"{{end}}>{{if eq (add $i 1) $n}}<span class="mono">{{$c.Name}}</span>{{else}}<a class="mono" href="/{{$.Repo.Path}}/-/tree/{{$.Repo.Ref}}/{{$c.Path}}">{{$c.Name}}</a>{{end}}</li>{{end}}{{end}}
+{{define "content"}}
+{{$d := .Data}}{{$raw := printf "/%s/-/raw/%s/%s" .Repo.Path .Repo.Ref $d.Path}}
+{{if eq .Repo.RefKind "commit"}}<div class="alert info compact">{{template "icon" "commit"}}<div class="alert-body">You are viewing this file at commit <span class="sha">{{short .Repo.Ref}}</span>. <a href="/{{.Repo.Path}}/-/blob/{{.Repo.Default}}/{{$d.Path}}">Go to {{.Repo.Default}}</a></div></div>{{end}}
+<div class="toolbar">{{template "refswitch" .}}<span class="spacer"></span></div>
+{{with $d.LastCommit}}{{if .OID}}<div class="lastcommit standalone">
+  {{template "avatar" (dict "Name" .AuthorName "Size" "sm")}}
+  <div class="grow"><span class="strong nowrap">{{.AuthorName}}</span><a class="lc-subject" href="/{{$.Repo.Path}}/-/commit/{{.OID}}" title="{{.Subject}}">{{.Subject}}</a></div>
+  <div class="lc-end">
+    <a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.OID}}" aria-label="Commit {{short .OID}}">{{short .OID}}</a>
+    <span class="lc-meta">{{template "time" .AuthorDate}}</span>
+  </div>
+</div>{{end}}{{end}}
+<div class="blob">
+  <div class="blob-head">
+    {{template "iconc" (dict "N" "file" "C" "i-muted")}}<span class="blob-name">{{$d.Name}}</span>
+    <span class="blob-meta">{{if $d.Lines}}{{$d.Lines}} line{{if ne $d.Lines 1}}s{{end}}<span class="sep-dot"></span>{{end}}{{size $d.Size}}</span>
+    <div class="blob-actions">
+      {{if $d.Markdown}}<a class="btn sm" href="#source">{{template "icon" "code"}}Source</a>{{end}}
+      <div class="btn-group">
+        <a class="btn sm" href="{{$raw}}">Raw</a>
+        <a class="btn sm" href="/{{.Repo.Path}}/-/blob/{{$d.Commit}}/{{$d.Path}}" title="Link to this exact version">{{template "icon" "link"}}<span class="hide-sm">Permalink</span></a>
+        <a class="btn sm" href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}/{{$d.Path}}">{{template "icon" "history"}}<span class="hide-sm">History</span></a>
+      </div>
+    </div>
+  </div>
+  <div class="blob-body">
+    {{if $d.IsImage}}<img src="{{$d.RawURL}}" alt="{{$d.Name}}">
+    {{else if $d.TooLarge}}<div class="blank compact"><div class="blank-art" aria-hidden="true">{{template "icon" "file"}}</div><h2 class="blank-title">This file is too large to show</h2><p class="blank-text">Files over 1 MiB are not rendered.</p><div class="blank-actions"><a class="btn" href="{{$raw}}">{{template "icon" "download"}}Download</a></div></div>
+    {{else if $d.Binary}}<div class="blank compact"><div class="blank-art" aria-hidden="true">{{template "icon" "file"}}</div><h2 class="blank-title">Binary file</h2><p class="blank-text">This file is not text, so there is nothing to preview.</p><div class="blank-actions"><a class="btn" href="{{$raw}}">{{template "icon" "download"}}Download</a></div></div>
+    {{else if $d.Markdown}}<div class="markdown">{{$d.Markdown}}</div>
+    {{else}}{{$d.Highlighted}}{{end}}
+  </div>
+</div>
+{{if $d.Markdown}}<div class="blob mt-6" id="source"><div class="blob-head"><span class="blob-name">Source</span></div><div class="blob-body">{{$d.Highlighted}}</div></div>{{end}}
+{{end}}

@@ -1,0 +1,26 @@
+{{define "crumbs"}}<li aria-current="page">Issues</li>{{end}}
+{{define "content"}}
+<div class="page-head"><div><h1 class="page-title">Issues</h1></div>
+  <div class="page-actions">{{if .User}}<a class="btn primary" href="/{{.Repo.Path}}/-/issues/new">{{template "icon" "plus"}}New issue</a>{{else}}<a class="btn" href="/-/signin?next={{.Path | urlquery}}">Sign in to open an issue</a>{{end}}</div></div>
+<nav class="tabs" aria-label="Issue state">
+  <a href="?state=opened"{{if eq .Data.State "opened"}} aria-current="page"{{end}}>{{template "icon" "issue"}}Open <span class="count">{{.Data.CountOpen}}</span></a>
+  <a href="?state=closed"{{if eq .Data.State "closed"}} aria-current="page"{{end}}>{{template "icon" "issue-closed"}}Closed <span class="count">{{.Data.CountClosed}}</span></a>
+  <a href="?state=all"{{if eq .Data.State "all"}} aria-current="page"{{end}}>All</a>
+</nav>
+{{if .Data.Issues}}<ul class="list linked card">
+{{range .Data.Issues}}<li>
+  {{template "stateicon" (dict "Kind" "issue" "State" .State)}}
+  <div class="grow"><a class="title" href="/{{$.Repo.Path}}/-/issues/{{.Number}}">{{.Title}}</a>
+    <div class="meta">#{{.Number}} opened {{template "time" .Created}} by @{{.Author}}</div></div>
+  <div class="end">{{with len .Comments}}<span class="stat" title="{{.}} comment{{if ne . 1}}s{{end}}">{{template "icon" "comment"}}{{.}}<span class="sr-only"> comment{{if ne . 1}}s{{end}}</span></span>{{end}}<span class="hide-sm">Updated {{template "time" .Updated}}</span></div>
+</li>{{end}}</ul>
+{{else}}
+<div class="card"><div class="blank compact">
+  <div class="blank-art" aria-hidden="true">{{template "icon" "issue"}}</div>
+  <h2 class="blank-title">{{if eq .Data.State "closed"}}No closed issues{{else if eq .Data.State "all"}}No issues yet{{else}}No open issues{{end}}</h2>
+  <p class="blank-text">Issues track bugs and ideas. They live in this repository as <span class="mono">refs/newgit/issues/N</span>, so a git fetch brings them along.</p>
+  <div class="blank-actions">{{if .User}}<a class="btn primary" href="/{{.Repo.Path}}/-/issues/new">New issue</a>{{else}}<a class="btn" href="/-/signin?next={{.Path | urlquery}}">Sign in to open an issue</a>{{end}}</div>
+</div></div>
+{{end}}
+<p class="footer-note">{{template "icon" "database"}}Fetch issues with <code>git fetch origin '+refs/newgit/*:refs/newgit/*'</code></p>
+{{end}}

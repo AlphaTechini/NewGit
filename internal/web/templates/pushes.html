@@ -1,0 +1,16 @@
+{{define "crumbs"}}<li aria-current="page">Push log</li>{{end}}
+{{define "content"}}
+<div class="page-head"><div><h1 class="page-title">Push log</h1><p class="page-desc">Every ref change made through NewGit, with the account that made it. Stored in the repository at <span class="mono">refs/newgit/pushlog</span>.</p></div></div>
+{{if .Data.Pushes}}<ul class="list card">
+{{range .Data.Pushes}}<li>
+  {{template "avatar" (dict "Name" .By "Size" "md")}}
+  <div class="grow">
+    <div><a class="strong" href="/{{.By}}">@{{.By}}</a> <span class="muted">pushed {{len .Commits}} commit{{if ne (len .Commits) 1}}s{{end}} via</span> {{if eq .Via "agit"}}<span class="pill agit">AGit</span>{{else}}<span class="pill neutral">{{.Via}}</span>{{end}} <span class="muted">{{template "time" .At}}</span></div>
+    <div class="reflines">{{range .Refs}}<div class="refline"><span class="mono">{{.Ref}}</span>
+      {{if isZeroOID .Old}}<span class="created">created</span>{{else}}<a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.Old}}">{{short .Old}}</a>{{end}}
+      <span class="arrow">{{template "iconc" (dict "N" "arrow-right" "C" "xs")}}</span>
+      {{if isZeroOID .New}}<span class="deleted">deleted</span>{{else}}<a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.New}}">{{short .New}}</a>{{end}}</div>{{end}}</div>
+  </div>
+</li>{{end}}</ul>
+{{else}}<div class="card">{{template "blank" (dict "Icon" "push" "Title" "No pushes recorded yet" "Text" "The first git push to this project will appear here with the account that made it." "Class" "compact")}}</div>{{end}}
+{{end}}

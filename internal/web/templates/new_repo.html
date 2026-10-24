@@ -1,0 +1,14 @@
+{{define "pageclass"}}narrow{{end}}
+{{define "content"}}
+<div class="page-head"><div><h1 class="page-title">New project</h1><p class="page-desc">A Git repository with merge requests and issues. Anyone can browse and clone it.</p></div></div>
+<form method="post" action="/-/new" class="card"><div class="card-body">
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+  <div class="field"><label for="name">Project name</label>
+    <div class="prefix-input"><span class="prefix">{{template "avatar" (dict "Name" .User.Username "Size" "xs")}}{{.User.Username}} /</span><input type="text" id="name" name="name" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,63}" value="{{with .Data}}{{.Name}}{{end}}" placeholder="my-project" aria-describedby="name-hint" autocapitalize="none" spellcheck="false"></div>
+    <p class="hint" id="name-hint">Letters, digits, dots, dashes and underscores. Clone URL: <span class="mono">{{.BaseURL}}/{{.User.Username}}/&lt;name&gt;.git</span></p></div>
+  <div class="field"><label for="description">Description <span class="optional">(optional)</span></label>
+    <textarea id="description" name="description" maxlength="500" class="short">{{with .Data}}{{.Description}}{{end}}</textarea></div>
+  <label class="check"><input type="checkbox" name="readme" checked><span>Initialize with a README<span class="hint">Creates the main branch with one commit, so you can clone right away.</span></span></label>
+  <div class="form-actions"><button class="btn primary" type="submit">Create project</button><a class="btn ghost" href="/">Cancel</a></div>
+</div></form>
+{{end}}
