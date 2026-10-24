@@ -1,8 +1,6 @@
 module github.com/AlphaTechini/newgit
 
-go 1.24.0
-
-toolchain go1.24.7
+go 1.22.0
 
 require (
 	github.com/alecthomas/chroma/v2 v2.23.1

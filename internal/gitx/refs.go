@@ -40,7 +40,7 @@ func ReadRefs(ctx context.Context, gitDir string, prefixes ...string) (Refs, err
 		return Refs{}, err
 	}
 	refs := Refs{commits: map[string]string{}}
-	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		f := strings.Split(line, "\x00")
 		if len(f) < 8 {
 			continue

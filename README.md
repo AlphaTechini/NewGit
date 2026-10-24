@@ -19,7 +19,7 @@ See [details.md](details.md) for the design and sources, and [requirements.md](r
 
 ## Quick start
 
-Requirements: Go 1.24+ and **git 2.38+** on the server's PATH. For the smoke test you also need Node 18+.
+Requirements: Go 1.22+ and **git 2.38+** on the server's PATH. For the smoke test you also need Node 18+.
 
 ```sh
 make run            # or: go run ./cmd/newgit -addr :8080 -data ./data

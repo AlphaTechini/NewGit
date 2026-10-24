@@ -61,7 +61,7 @@ This is the same proof-of-possession pattern as Google's Device Bound Session Cr
   - `refs/merge-requests/N/head`, `refs/merge-requests/N/vK`: MR code versions.
   - `refs/newgit/issues/N`, `refs/newgit/mr/N`, `refs/newgit/pushlog`: op-logs.
 - **Web UI:** server-rendered `html/template` with a GitLab-style layout (top bar plus a project sidebar), chroma for syntax highlighting, and goldmark for Markdown (raw HTML disabled). The only JavaScript is device sign-in.
-- **MCP:** streamable HTTP at `/mcp` (JSON-RPC 2.0: `initialize`, `tools/list`, `tools/call`, `ping`), authenticated with a personal access token as a Bearer token. It is a small hand-written handler (no SDK) so the build needs no `golang.org/x` modules and stays on Go 1.24; tool input schemas are generated from Go structs.
+- **MCP:** streamable HTTP at `/mcp` (JSON-RPC 2.0: `initialize`, `tools/list`, `tools/call`, `ping`), authenticated with a personal access token as a Bearer token. It is a small hand-written handler (no SDK) so the build needs no `golang.org/x` modules and builds with Go 1.22 or newer; tool input schemas are generated from Go structs.
 
 ## Sources
 
