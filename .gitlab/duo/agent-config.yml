@@ -14,6 +14,9 @@ setup_script:
   - mv /tmp/k6 /tmp/bin/k6
 network_policy:
   include_recommended_allowed: true
+  # NewGit listens on a Unix socket for its git hooks at startup; the sandbox
+  # blocks Unix sockets unless this is set.
+  allow_all_unix_sockets: true
   allowed_domains:
     - github.com
     - objects.githubusercontent.com
