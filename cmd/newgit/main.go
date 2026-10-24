@@ -27,6 +27,7 @@ import (
 	"github.com/AlphaTechini/newgit/internal/gitx"
 	"github.com/AlphaTechini/newgit/internal/hooks"
 	"github.com/AlphaTechini/newgit/internal/mcpserver"
+	"github.com/AlphaTechini/newgit/internal/seed"
 	"github.com/AlphaTechini/newgit/internal/store"
 	"github.com/AlphaTechini/newgit/internal/web"
 )
@@ -49,6 +50,7 @@ func main() {
 	dataDir := fs.String("data", envOr("NEWGIT_DATA", "./data"), "data directory")
 	baseURL := fs.String("base-url", envOr("NEWGIT_BASE_URL", ""), "public base URL, e.g. https://git.example.com (default http://localhost<addr>)")
 	maxPush := fs.Int64("max-push-mb", 200, "largest accepted push pack in MiB")
+	seedDemo := fs.Bool("seed-demo", false, "create a demo user, repository, issues and merge requests if the data dir has none")
 	_ = fs.Parse(args)
 
 	if *baseURL == "" {
@@ -59,7 +61,7 @@ func main() {
 		*baseURL = "http://" + host
 	}
 	*baseURL = strings.TrimRight(*baseURL, "/")
-	if err := run(*addr, *dataDir, *baseURL, *maxPush); err != nil {
+	if err := run(*addr, *dataDir, *baseURL, *maxPush, *seedDemo); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -93,7 +95,7 @@ func checkGit() error {
 	return nil
 }
 
-func run(addr, dataDir, baseURL string, maxPushMB int64) error {
+func run(addr, dataDir, baseURL string, maxPushMB int64, seedDemo bool) error {
 	if err := checkGit(); err != nil {
 		return err
 	}
@@ -156,6 +158,11 @@ func run(addr, dataDir, baseURL string, maxPushMB int64) error {
 	st, err := store.Open(ctx, dataDir)
 	if err != nil {
 		return err
+	}
+	if seedDemo {
+		if err := seed.Demo(ctx, st, baseURL); err != nil {
+			return err
+		}
 	}
 	secure := strings.HasPrefix(baseURL, "https://")
 	a, err := auth.New(filepath.Join(dataDir, "session.key"), secure)
