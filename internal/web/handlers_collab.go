@@ -174,8 +174,7 @@ func (s *Server) handleNewMR(w http.ResponseWriter, r *http.Request, repo store.
 	if u == nil {
 		return
 	}
-	branches, _ := gitx.ListBranches(r.Context(), repo.Dir)
-	data := map[string]any{"Branches": branches, "Source": r.URL.Query().Get("source"), "Target": rc.Default, "Title": "", "Description": "", "Compared": false}
+	data := map[string]any{"Branches": repoRefs(r, repo.Dir).Branches, "Source": r.URL.Query().Get("source"), "Target": rc.Default, "Title": "", "Description": "", "Compared": false}
 	if r.Method == http.MethodGet {
 		s.compareBranches(r, repo, rc, data)
 		s.render(w, r, "mr_new.html", &Page{Title: "New merge request", Repo: rc, Nav: "mrs", Data: data})
@@ -232,8 +231,9 @@ func (s *Server) compareBranches(r *http.Request, repo store.Repo, rc *RepoCtx, 
 	if src == "" || !gitx.SafeRevision(src) || !gitx.SafeRevision(tgt) {
 		return
 	}
-	srcOID, ok1 := gitx.RefTarget(ctx, repo.Dir, "refs/heads/"+src)
-	tgtOID, ok2 := gitx.RefTarget(ctx, repo.Dir, "refs/heads/"+tgt)
+	refs := repoRefs(r, repo.Dir)
+	srcOID, ok1 := refs.Commit("refs/heads/" + src)
+	tgtOID, ok2 := refs.Commit("refs/heads/" + tgt)
 	if !ok1 || !ok2 {
 		return
 	}

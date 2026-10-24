@@ -160,24 +160,8 @@ type Branch struct {
 
 // ListBranches lists branches sorted by most recent commit.
 func ListBranches(ctx context.Context, gitDir string) ([]Branch, error) {
-	out, err := Run(ctx, gitDir, nil, "for-each-ref", "--sort=-committerdate",
-		"--format=%(refname:strip=2)%00%(objectname)%00%(subject)%00%(authorname)%00%(committerdate:unix)", "refs/heads/")
-	if err != nil {
-		return nil, err
-	}
-	var bs []Branch
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		if line == "" {
-			continue
-		}
-		f := strings.Split(line, "\x00")
-		if len(f) < 5 {
-			continue
-		}
-		ct, _ := strconv.ParseInt(f[4], 10, 64)
-		bs = append(bs, Branch{Name: f[0], Commit: Commit{OID: f[1], Subject: f[2], AuthorName: f[3], CommitDate: time.Unix(ct, 0)}})
-	}
-	return bs, nil
+	refs, err := ReadRefs(ctx, gitDir, "refs/heads/")
+	return refs.Branches, err
 }
 
 // AheadBehind returns how many commits a is ahead of and behind b.
@@ -204,15 +188,6 @@ func MergeBase(ctx context.Context, gitDir, a, b string) (string, error) {
 func IsAncestor(ctx context.Context, gitDir, a, b string) bool {
 	_, err := Run(ctx, gitDir, nil, "merge-base", "--is-ancestor", "--end-of-options", a, b)
 	return err == nil
-}
-
-// HeadBranch returns the branch HEAD points at.
-func HeadBranch(ctx context.Context, gitDir string) string {
-	s, err := RunString(ctx, gitDir, "symbolic-ref", "--short", "HEAD")
-	if err != nil {
-		return "main"
-	}
-	return s
 }
 
 // RevList returns commit ids reachable from include but not from exclude.
@@ -286,28 +261,8 @@ type TagInfo struct {
 
 // ListTags lists tags, newest first by creator date.
 func ListTags(ctx context.Context, gitDir string) ([]TagInfo, error) {
-	out, err := Run(ctx, gitDir, nil, "for-each-ref", "--sort=-creatordate",
-		"--format=%(refname:strip=2)%00%(objectname)%00%(*objectname)%00%(contents:subject)%00%(creatordate:unix)", "refs/tags/")
-	if err != nil {
-		return nil, err
-	}
-	var tags []TagInfo
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		if line == "" {
-			continue
-		}
-		f := strings.Split(line, "\x00")
-		if len(f) < 5 {
-			continue
-		}
-		oid := f[1]
-		if f[2] != "" {
-			oid = f[2]
-		}
-		ct, _ := strconv.ParseInt(f[4], 10, 64)
-		tags = append(tags, TagInfo{Name: f[0], OID: oid, Subject: f[3], Date: time.Unix(ct, 0)})
-	}
-	return tags, nil
+	refs, err := ReadRefs(ctx, gitDir, "refs/tags/")
+	return refs.Tags, err
 }
 
 // CountCommits counts commits in a rev-list expression list (e.g. "main", or

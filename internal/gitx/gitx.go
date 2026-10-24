@@ -260,6 +260,9 @@ func RunLimited(ctx context.Context, gitDir string, limit int64, args ...string)
 	cmd := Cmd(ctx, gitDir, args...)
 	var errb bytes.Buffer
 	cmd.Stderr = &errb
+	// On Windows "git" is a launcher that runs the real git as a child, so
+	// Kill alone leaves that child holding our pipes and Wait never returns.
+	cmd.WaitDelay = 5 * time.Second
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, false, err
@@ -270,6 +273,8 @@ func RunLimited(ctx context.Context, gitDir string, limit int64, args ...string)
 	out, rerr := io.ReadAll(io.LimitReader(stdout, limit+1))
 	if int64(len(out)) > limit {
 		out, truncated = out[:limit], true
+		// Closing our end makes any process still writing exit on a broken pipe.
+		_ = stdout.Close()
 		_ = cmd.Process.Kill()
 	}
 	werr := cmd.Wait()

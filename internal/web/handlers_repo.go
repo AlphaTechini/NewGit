@@ -95,7 +95,7 @@ func (s *Server) treeData(r *http.Request, repo store.Repo, commit, p string) (*
 			}
 		}
 	}
-	td.Branches, _ = gitx.ListBranches(ctx, repo.Dir)
+	td.Branches = repoRefs(r, repo.Dir).Branches
 	return td, nil
 }
 
@@ -106,7 +106,7 @@ func (s *Server) handleRepoHome(w http.ResponseWriter, r *http.Request, repo sto
 		s.render(w, r, "repo_empty.html", page)
 		return
 	}
-	commit, ok := gitx.RefTarget(r.Context(), repo.Dir, "refs/heads/"+rc.Default)
+	commit, ok := repoRefs(r, repo.Dir).Commit("refs/heads/" + rc.Default)
 	if !ok {
 		s.render(w, r, "repo_empty.html", page)
 		return
@@ -121,7 +121,7 @@ func (s *Server) handleRepoHome(w http.ResponseWriter, r *http.Request, repo sto
 }
 
 func (s *Server) handleTree(w http.ResponseWriter, r *http.Request, repo store.Repo, rest string) {
-	ref, commit, p, ok := resolveRefPath(r.Context(), repo.Dir, rest)
+	ref, commit, p, ok := resolveRefPath(r, repo.Dir, rest)
 	if !ok {
 		s.errorPage(w, r, 404, "Branch, tag or commit not found.")
 		return
@@ -132,7 +132,7 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request, repo store.R
 		return
 	}
 	if p != "" {
-		if t, err := gitx.ObjectType(r.Context(), repo.Dir, commit+":"+p); err != nil || t != "tree" {
+		if t, _, err := gitx.ObjectInfo(r.Context(), repo.Dir, commit+":"+p); err != nil || t != "tree" {
 			if err == nil && t == "blob" {
 				http.Redirect(w, r, "/"+repo.Path()+"/-/blob/"+ref+"/"+p, http.StatusFound)
 				return
@@ -155,7 +155,7 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request, repo store.R
 }
 
 func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request, repo store.Repo, rest string, raw bool) {
-	ref, commit, p, ok := resolveRefPath(r.Context(), repo.Dir, rest)
+	ref, commit, p, ok := resolveRefPath(r, repo.Dir, rest)
 	if !ok || p == "" {
 		s.errorPage(w, r, 404, "File not found.")
 		return
@@ -166,7 +166,8 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request, repo store.R
 		return
 	}
 	ctx := r.Context()
-	if t, err := gitx.ObjectType(ctx, repo.Dir, commit+":"+p); err != nil || t != "blob" {
+	t, size, err := gitx.ObjectInfo(ctx, repo.Dir, commit+":"+p)
+	if err != nil || t != "blob" {
 		if err == nil && t == "tree" {
 			http.Redirect(w, r, "/"+repo.Path()+"/-/tree/"+ref+"/"+p, http.StatusFound)
 			return
@@ -174,7 +175,6 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request, repo store.R
 		s.errorPage(w, r, 404, "File not found.")
 		return
 	}
-	size, _ := gitx.ObjectSize(ctx, repo.Dir, commit+":"+p)
 	if raw {
 		if size > 50<<20 {
 			http.Error(w, "file too large", http.StatusRequestEntityTooLarge)
@@ -246,7 +246,7 @@ func (s *Server) handleCommits(w http.ResponseWriter, r *http.Request, repo stor
 	if rest == "" {
 		rest = rc.Default
 	}
-	ref, commit, p, ok := resolveRefPath(r.Context(), repo.Dir, rest)
+	ref, commit, p, ok := resolveRefPath(r, repo.Dir, rest)
 	if !ok {
 		if rc.Empty {
 			s.render(w, r, "repo_empty.html", &Page{Title: repo.Path(), Repo: rc, Nav: "commits"})
@@ -327,12 +327,9 @@ func (s *Server) handleCommit(w http.ResponseWriter, r *http.Request, repo store
 
 func (s *Server) handleBranches(w http.ResponseWriter, r *http.Request, repo store.Repo) {
 	rc := s.repoCtx(r, repo, "")
-	bs, err := gitx.ListBranches(r.Context(), repo.Dir)
-	if err != nil {
-		s.storeError(w, r, err)
-		return
-	}
-	def, hasDef := gitx.RefTarget(r.Context(), repo.Dir, "refs/heads/"+rc.Default)
+	refs := repoRefs(r, repo.Dir)
+	bs := refs.Branches
+	def, hasDef := refs.Commit("refs/heads/" + rc.Default)
 	for i := range bs {
 		if hasDef && bs[i].Name != rc.Default {
 			bs[i].Ahead, bs[i].Behind, _ = gitx.AheadBehind(r.Context(), repo.Dir, bs[i].Commit.OID, def)
@@ -349,11 +346,7 @@ func (s *Server) handleBranches(w http.ResponseWriter, r *http.Request, repo sto
 
 func (s *Server) handleTags(w http.ResponseWriter, r *http.Request, repo store.Repo) {
 	rc := s.repoCtx(r, repo, "")
-	tags, err := gitx.ListTags(r.Context(), repo.Dir)
-	if err != nil {
-		s.storeError(w, r, err)
-		return
-	}
+	tags := repoRefs(r, repo.Dir).Tags
 	if tags == nil {
 		tags = []gitx.TagInfo{}
 	}

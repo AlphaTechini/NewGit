@@ -4,7 +4,7 @@
   <div class="issuable-head">
     <div class="grow"><h1 class="issuable-title">{{$m.Title}} <span class="num">!{{$m.Number}}</span></h1></div>
     {{if and .Data.CanState (ne $m.State "merged")}}<form class="issuable-actions" method="post" action="{{$base}}/state"><input type="hidden" name="csrf" value="{{.CSRF}}">
-      {{if eq $m.State "opened"}}<input type="hidden" name="state" value="closed"><button class="btn sm" type="submit" data-confirm="Close !{{$m.Number}} without merging?">Close</button>{{else}}<input type="hidden" name="state" value="opened"><button class="btn sm" type="submit">{{template "icon" "reopen"}}Reopen</button>{{end}}</form>{{end}}
+      {{if eq $m.State "opened"}}<input type="hidden" name="state" value="closed"><button class="btn sm" type="submit" data-confirm="Close !{{$m.Number}} without merging?" data-confirm-body="Nothing is merged. You can reopen it later." data-confirm-ok="Close merge request" data-confirm-tone="danger">Close</button>{{else}}<input type="hidden" name="state" value="opened"><button class="btn sm" type="submit">{{template "icon" "reopen"}}Reopen</button>{{end}}</form>{{end}}
   </div>
   <div class="issuable-meta">
     {{template "statepill" (dict "Kind" "mr" "State" $m.State)}}
@@ -96,7 +96,7 @@
     <div class="mergebox {{if .Mergeable}}ready{{else if .Conflicts}}conflict{{else}}blocked{{end}}">
       <div class="mb-row"><span class="mb-icon">{{if .Mergeable}}{{template "icon" "check"}}{{else if .Conflicts}}{{template "icon" "x"}}{{else}}{{template "icon" "alert"}}{{end}}</span><div class="mb-main">
         {{if .Mergeable}}<div class="mb-title">Ready to merge</div><div class="mb-text">No conflicts with <span class="ref">{{$m.TargetBranch}}</span>. Checked with <code>git merge-tree</code>, nothing is checked out.</div>
-          {{if $.Data.CanMerge}}<div class="mb-actions"><form method="post" action="{{$base}}/merge"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="btn primary" type="submit" data-confirm="Merge !{{$m.Number}} into {{$m.TargetBranch}}?">{{template "icon" "merge"}}Merge into {{$m.TargetBranch}}</button></form><span class="hint">Creates a merge commit on {{$m.TargetBranch}}.</span></div>
+          {{if $.Data.CanMerge}}<div class="mb-actions"><form method="post" action="{{$base}}/merge"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="btn primary" type="submit" data-confirm="Merge !{{$m.Number}} into {{$m.TargetBranch}}?" data-confirm-body="This creates a merge commit on {{$m.TargetBranch}}." data-confirm-ok="Merge">{{template "icon" "merge"}}Merge into {{$m.TargetBranch}}</button></form><span class="hint">Creates a merge commit on {{$m.TargetBranch}}.</span></div>
           {{else}}<div class="mb-text">Only the project owner can merge.</div>{{end}}
         {{else if .Conflicts}}<div class="mb-title">Merge conflicts</div><div class="mb-text">Rebase on {{$m.TargetBranch}} and push a new version.</div><div class="mb-files">{{range .Conflicts}}<span class="sha">{{.}}</span>{{end}}</div>
         {{else if .AlreadyMerged}}<div class="mb-title">Already merged</div><div class="mb-text">{{$m.TargetBranch}} already contains these commits.</div>

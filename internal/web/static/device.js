@@ -191,8 +191,72 @@
       f.addEventListener("submit", function () { localStorage.setItem(SIGNED_OUT, "1"); });
     });
     document.querySelectorAll("[data-confirm]").forEach(function (el) {
-      el.addEventListener("click", function (ev) { if (!confirm(el.getAttribute("data-confirm"))) ev.preventDefault(); });
+      el.addEventListener("click", function (ev) {
+        if (el._ngConfirmed) { el._ngConfirmed = false; return; }
+        ev.preventDefault();
+        askConfirm(el);
+      });
     });
+  }
+
+  // In-app replacement for window.confirm(). The trigger keeps working as a
+  // plain submit button: once confirmed it is clicked again and let through,
+  // so the form posts exactly as it would without the dialog.
+  var confirmDialog = null;
+  var confirmFor = null;
+
+  // Settles the open dialog once: confirm re-clicks the trigger, anything
+  // else hands focus back to it. Buttons and Escape call this directly rather
+  // than waiting for the "close" event, which Chrome only fires on a frame.
+  function settleConfirm(confirmed) {
+    var el = confirmFor;
+    confirmFor = null;
+    if (!el) return;
+    if (confirmDialog.open) confirmDialog.close();
+    if (confirmed) { el._ngConfirmed = true; el.click(); } else el.focus();
+  }
+
+  function buildConfirmDialog() {
+    var d = document.createElement("dialog");
+    d.className = "confirm-dialog";
+    d.setAttribute("aria-labelledby", "ng-confirm-title");
+    d.setAttribute("aria-describedby", "ng-confirm-body");
+    d.innerHTML = '<div class="confirm-box"><h2 id="ng-confirm-title"></h2><p id="ng-confirm-body"></p>' +
+      '<div class="btn-row"><button type="button" class="btn" data-cancel>Cancel</button>' +
+      '<button type="button" class="btn" data-ok></button></div></div>';
+    d.querySelector("[data-ok]").addEventListener("click", function () { settleConfirm(true); });
+    d.querySelector("[data-cancel]").addEventListener("click", function () { settleConfirm(false); });
+    d.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape") { ev.preventDefault(); settleConfirm(false); }
+    });
+    // Clicking the dimmed backdrop cancels, like Escape does.
+    d.addEventListener("click", function (ev) { if (ev.target === d) settleConfirm(false); });
+    // A late close event from an earlier, already settled dialog must not
+    // cancel the one that is open now.
+    d.addEventListener("close", function () { if (!d.open) settleConfirm(false); });
+    document.body.appendChild(d);
+    return d;
+  }
+
+  function askConfirm(el) {
+    if (!window.HTMLDialogElement || !HTMLDialogElement.prototype.showModal) {
+      if (confirm(el.getAttribute("data-confirm"))) { el._ngConfirmed = true; el.click(); }
+      return;
+    }
+    var d = confirmDialog || (confirmDialog = buildConfirmDialog());
+    var danger = el.getAttribute("data-confirm-tone") === "danger";
+    var body = el.getAttribute("data-confirm-body") || "";
+    var ok = d.querySelector("[data-ok]");
+    var cancel = d.querySelector("[data-cancel]");
+    d.querySelector("h2").textContent = el.getAttribute("data-confirm");
+    d.querySelector("p").textContent = body;
+    d.querySelector("p").hidden = !body;
+    ok.textContent = el.getAttribute("data-confirm-ok") || "Confirm";
+    ok.className = danger ? "btn danger solid" : "btn primary";
+    confirmFor = el;
+    d.showModal();
+    // Destructive actions start on Cancel so a stray Enter cannot confirm them.
+    (danger ? cancel : ok).focus();
   }
 
   // Progressive enhancement for <details class="dropdown"> menus: one open at

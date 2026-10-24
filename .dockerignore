@@ -1,0 +1,19 @@
+# Only go.mod, go.sum, cmd/ and internal/ are needed to build the image.
+.git
+.gitignore
+.gitlab-ci.yml
+.env
+.env.*
+data/
+bin/
+newgit
+node_modules/
+screenshots/
+scripts/
+*.md
+*.test
+Dockerfile
+.dockerignore
+Makefile
+package.json
+pnpm-lock.yaml

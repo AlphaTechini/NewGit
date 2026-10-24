@@ -1505,6 +1505,24 @@ a.note-author:hover { color: var(--link); text-decoration: none; }
   table.diff td.ln { padding: 0 6px 0 2px; }
 }
 
+/* ------------------------------------------------------ confirm dialog */
+.confirm-dialog {
+  width: min(440px, calc(100vw - 32px)); padding: 0; margin: auto;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--bg-surface); color: var(--text); box-shadow: var(--shadow-float);
+}
+.confirm-dialog::backdrop { background: rgb(15 17 20 / .5); }
+.confirm-dialog[open] { animation: confirm-in .14s ease-out; }
+@keyframes confirm-in { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+.confirm-dialog .confirm-box { padding: var(--sp-5); }
+.confirm-dialog h2 { margin: 0; font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; overflow-wrap: anywhere; }
+.confirm-dialog p { margin: var(--sp-2) 0 0; color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+.confirm-dialog .btn-row { justify-content: flex-end; margin-top: var(--sp-5); }
+.btn.danger.solid:hover { background: color-mix(in srgb, var(--closed-solid) 88%, #000); border-color: color-mix(in srgb, var(--closed-solid) 88%, #000); color: #fff; }
+@media (max-width: 480px) {
+  .confirm-dialog .btn-row { flex-direction: column-reverse; align-items: stretch; }
+}
+
 /* ------------------------------------------------------ a11y preferences */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -104,6 +104,26 @@ pnpm screenshots --keep          # leave the seeded server running to click arou
 
 The seed has two accounts, a project with branches, tags, a versioned AGit merge request, a branch merge request and issues. Set `NEWGIT_BIN` to build the binary somewhere other than `bin/newgit`. The run fails on any 5xx or template error.
 
+## Deploy to Cloud Run (demo)
+
+The [Dockerfile](Dockerfile) builds a static binary and runs it on Alpine with git 2.54 as a non-root user. It uses no BuildKit-only syntax, so Cloud Build can build it straight from source:
+
+```sh
+gcloud run deploy newgit --source . --region us-central1 \
+  --allow-unauthenticated --port 8080 --max-instances 1 --memory 1Gi
+
+# Then tell NewGit its public HTTPS URL (clone URLs, secure cookies):
+URL=$(gcloud run services describe newgit --region us-central1 --format 'value(status.url)')
+gcloud run services update newgit --region us-central1 --update-env-vars NEWGIT_BASE_URL=$URL
+```
+
+Know these before demoing:
+
+- **Data is not durable.** Everything lives under `/data` on the instance's in-memory disk, so accounts, repos, issues and MRs are wiped when Cloud Run replaces the instance (deploys, scale to zero, maintenance). Add `--min-instances 1` to keep one warm during a demo. For durable hosting, run the same image on a VM with a persistent disk mounted at `/data`.
+- **Keep `--max-instances 1`.** The index is in memory and the repos are on local disk, so a second instance would see a different, empty server.
+- **Pushes are capped at 32 MiB** by Cloud Run's HTTP/1 request limit.
+- Sign-in works because Cloud Run serves HTTPS, which WebCrypto requires.
+
 ## Design
 
 The UI is server-rendered with no framework.
@@ -112,7 +132,7 @@ The UI is server-rendered with no framework.
 - **Font:** Inter Variable, self-hosted under `internal/web/static/fonts/` (SIL OFL 1.1).
 - **Icons:** an SVG sprite at `internal/web/static/icons.svg`.
 - **Style guide:** `/-/static/styleguide.html` shows every component in both themes.
-- **JavaScript:** the only script is `device.js`. It handles device sign-in, copy buttons and small conveniences such as Escape closing menus and Ctrl+Enter to comment.
+- **JavaScript:** the only script is `device.js`. It handles device sign-in, copy buttons, in-app confirm dialogs (any button with `data-confirm`, never the browser's `confirm()`) and small conveniences such as Escape closing menus and Ctrl+Enter to comment.
 
 ## Layout
 

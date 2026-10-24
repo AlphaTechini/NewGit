@@ -43,7 +43,7 @@
   <div class="grow"><div class="title">{{.Name}} <span class="pill {{if eq .Scope "write"}}accent{{else}}neutral{{end}}">{{.Scope}}</span></div>
     <div class="meta">Created {{template "time" .Created}}<span class="sep-dot"></span>Issued by this device<span class="sep-dot"></span><span class="mono">{{.ID}}</span></div></div>
   <div class="end"><form method="post" action="/-/device/tokens/revoke"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="id" value="{{.ID}}">
-    <button class="btn sm danger" type="submit" data-confirm="Revoke token '{{.Name}}'? Anything using it stops working.">Revoke<span class="sr-only"> token {{.Name}}</span></button></form></div>
+    <button class="btn sm danger" type="submit" data-confirm="Revoke token '{{.Name}}'?" data-confirm-body="Anything using it stops working right away." data-confirm-ok="Revoke token" data-confirm-tone="danger">Revoke<span class="sr-only"> token {{.Name}}</span></button></form></div>
 </li>{{end}}{{end}}
 </ul>
 {{else}}

@@ -37,6 +37,7 @@ type Server struct {
 
 	pages     map[string]*template.Template
 	chromaCSS string
+	counts    commitCounts
 }
 
 type ctxKey int
@@ -386,6 +387,7 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/"+repo.Path(), http.StatusFound)
 		return
 	}
+	r = withRefsMemo(r)
 	if rest == "" {
 		s.handleRepoHome(w, r, repo)
 		return
@@ -426,14 +428,13 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) repoCtx(r *http.Request, repo store.Repo, ref string) *RepoCtx {
 	ctx := r.Context()
+	refs := repoRefs(r, repo.Dir)
 	def := gitx.HeadBranch(ctx, repo.Dir)
-	_, hasDef := gitx.RefTarget(ctx, repo.Dir, "refs/heads/"+def)
+	defOID, hasDef := refs.Commit("refs/heads/" + def)
 	empty := !hasDef
-	if empty {
-		if bs, _ := gitx.ListBranches(ctx, repo.Dir); len(bs) > 0 {
-			empty = false
-			def = bs[0].Name
-		}
+	if empty && len(refs.Branches) > 0 {
+		empty = false
+		def, defOID = refs.Branches[0].Name, refs.Branches[0].Commit.OID
 	}
 	if ref == "" {
 		ref = def
@@ -441,19 +442,15 @@ func (s *Server) repoCtx(r *http.Request, repo store.Repo, ref string) *RepoCtx 
 	oi, om := s.Store.CountOpen(repo.ID)
 	rc := &RepoCtx{Repo: repo, Ref: ref, Default: def, CloneURL: s.BaseURL + "/" + repo.Path() + ".git", OpenIssues: oi, OpenMRs: om, Empty: empty}
 	rc.Branches, rc.Tags = []string{}, []string{}
-	if bs, _ := gitx.ListBranches(ctx, repo.Dir); bs != nil {
-		for _, b := range bs {
-			rc.Branches = append(rc.Branches, b.Name)
-		}
+	for _, b := range refs.Branches {
+		rc.Branches = append(rc.Branches, b.Name)
 	}
-	if ts, _ := gitx.ListTags(ctx, repo.Dir); ts != nil {
-		for _, t := range ts {
-			rc.Tags = append(rc.Tags, t.Name)
-		}
+	for _, t := range refs.Tags {
+		rc.Tags = append(rc.Tags, t.Name)
 	}
 	rc.BranchCount, rc.TagCount = len(rc.Branches), len(rc.Tags)
 	if !empty {
-		rc.CommitCount, _ = gitx.CountCommits(ctx, repo.Dir, "refs/heads/"+def)
+		rc.CommitCount = s.counts.get(ctx, repo.Dir, defOID)
 	}
 	rc.RefKind = "commit"
 	for _, b := range rc.Branches {
@@ -478,7 +475,8 @@ func (s *Server) repoCtx(r *http.Request, repo store.Repo, ref string) *RepoCtx 
 }
 
 // resolveRefPath splits "<ref>/<path>" where ref may contain slashes.
-func resolveRefPath(ctx context.Context, dir, rest string) (ref, commit, p string, ok bool) {
+func resolveRefPath(r *http.Request, dir, rest string) (ref, commit, p string, ok bool) {
+	refs := repoRefs(r, dir)
 	rest = strings.Trim(rest, "/")
 	parts := strings.Split(rest, "/")
 	for i := len(parts); i >= 1; i-- {
@@ -487,12 +485,12 @@ func resolveRefPath(ctx context.Context, dir, rest string) (ref, commit, p strin
 			continue
 		}
 		for _, full := range []string{"refs/heads/" + cand, "refs/tags/" + cand} {
-			if c, ok := gitx.RefTarget(ctx, dir, full+"^{commit}"); ok {
+			if c, ok := refs.Commit(full); ok {
 				return cand, c, strings.Join(parts[i:], "/"), true
 			}
 		}
 		if len(cand) >= 7 && len(cand) <= 40 && isHex(cand) {
-			if c, err := gitx.ResolveCommit(ctx, dir, cand); err == nil {
+			if c, err := gitx.ResolveCommit(r.Context(), dir, cand); err == nil {
 				return cand, c, strings.Join(parts[i:], "/"), true
 			}
 		}
