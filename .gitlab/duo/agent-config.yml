@@ -1,0 +1,21 @@
+# Duo Agent Platform runtime config for Downstream flow sessions in this project.
+# GitLab reads this file from the DEFAULT BRANCH of the project only, so a change
+# here takes effect for flow sessions after it is merged.
+#
+# Copied from the Downstream showcase project, where it was checked in a flow
+# session. setup_script installs k6 v0.56.0 into /tmp/bin, which Downstream uses
+# to replay user journeys. The sandbox image already has Go 1.22, which NewGit's
+# go.mod asks for. The recommended allowlist covers the Go module proxy and the
+# GitHub hosts that serve k6 and the pinned Downstream engine.
+setup_script:
+  - mkdir -p /tmp/bin
+  - curl -sSL -o /tmp/k6.tgz https://github.com/grafana/k6/releases/download/v0.56.0/k6-v0.56.0-linux-amd64.tar.gz
+  - tar -xzf /tmp/k6.tgz -C /tmp --strip-components=1 k6-v0.56.0-linux-amd64/k6
+  - mv /tmp/k6 /tmp/bin/k6
+network_policy:
+  include_recommended_allowed: true
+  allowed_domains:
+    - github.com
+    - objects.githubusercontent.com
+    - release-assets.githubusercontent.com
+    - dl.k6.io

@@ -1,0 +1,10 @@
+# Downstream target config: how to build and start NewGit for a measured run.
+# Downstream reads this file from the base commit of a merge request.
+root: .
+build: go build -o {out} ./cmd/newgit
+start: '{out} serve -addr 127.0.0.1:$PORT -data $(mktemp -d) -seed-demo'
+port_env: PORT
+ready_path: /-/health
+vus: 2
+iterations: 10
+duration: 60s

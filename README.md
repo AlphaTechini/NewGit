@@ -26,7 +26,7 @@ make run            # or: go run ./cmd/newgit -addr :8080 -data ./data
 open http://localhost:8080
 ```
 
-Flags (or env vars): `-addr` (`NEWGIT_ADDR`), `-data` (`NEWGIT_DATA`), `-base-url` (`NEWGIT_BASE_URL`, the public URL), `-max-push-mb`.
+Flags (or env vars): `-addr` (`NEWGIT_ADDR`), `-data` (`NEWGIT_DATA`), `-base-url` (`NEWGIT_BASE_URL`, the public URL), `-max-push-mb`, `-seed-demo` (create a demo user, repository, issues and merge requests in an empty data dir; see [internal/seed](internal/seed/README.md)).
 
 Sign-in uses WebCrypto, which browsers only allow in a secure context: `http://localhost` or HTTPS. To demo on another machine, put it behind HTTPS (for example a Cloudflare Tunnel) and set `-base-url https://your.host`.
 
