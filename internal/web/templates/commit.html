@@ -1,0 +1,18 @@
+{{define "crumbs"}}<li><a href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}">Commits</a></li><li aria-current="page"><span class="mono">{{short .Data.Commit.OID}}</span></li>{{end}}
+{{define "content"}}{{$c := .Data.Commit}}
+<header class="issuable">
+  <div class="issuable-head"><div class="grow"><h1 class="issuable-title">{{$c.Subject}}</h1></div>
+    <div class="issuable-actions"><a class="btn sm" href="/{{.Repo.Path}}/-/tree/{{$c.OID}}">{{template "icon" "code"}}Browse files</a></div></div>
+  <div class="issuable-meta">{{template "avatar" (dict "Name" $c.AuthorName "Size" "sm")}}<span class="who">{{$c.AuthorName}}</span> authored {{template "time" $c.AuthorDate}}<span class="sep-dot"></span><span class="sha">{{short $c.OID}}</span></div>
+</header>
+{{with $c.Body}}<pre class="codebox wrap commit-body">{{.}}</pre>{{end}}
+<div class="card"><div class="card-body"><dl class="kv">
+  <dt>Pushed by</dt><dd>{{with .Data.Pusher}}{{template "pusher" .}} <span class="muted">via {{.Via}}, {{template "time" .At}}. Recorded by the server from an authenticated push. The author below is whatever the commit claims.</span>{{else}}<span class="unverified">Pusher unknown</span> <span class="muted">No push-log entry, for example history imported before NewGit recorded pushes.</span>{{end}}</dd>
+  <dt>Author</dt><dd>{{$c.AuthorName}} <span class="muted">&lt;{{$c.AuthorEmail}}&gt;</span><span class="sep-dot"></span>{{datetime $c.AuthorDate}}</dd>
+  <dt>Committer</dt><dd>{{$c.CommitterName}} <span class="muted">&lt;{{$c.CommitterEmail}}&gt;</span><span class="sep-dot"></span>{{datetime $c.CommitDate}}</dd>
+  <dt>Parents</dt><dd>{{range $c.Parents}}<a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.}}">{{short .}}</a> {{else}}<span class="muted">Root commit</span>{{end}}</dd>
+  <dt>Commit</dt><dd><span class="mono" id="fullsha">{{$c.OID}}</span> {{template "copybtn" "fullsha"}}</dd>
+</dl></div></div>
+<div class="section-head"><h2 class="section-title">Changes</h2></div>
+{{template "diffview" (dict "Diffs" .Data.Diffs "RepoPath" .Repo.Path "Rev" $c.OID "Empty" "This commit changes no file content.")}}
+{{end}}

@@ -1,0 +1,50 @@
+{{define "crumbs"}}<li><a href="/{{.Repo.Path}}/-/merge_requests">Merge requests</a></li><li aria-current="page">New</li>{{end}}
+{{define "content"}}
+<div class="page-head"><div><h1 class="page-title">New merge request</h1><p class="page-desc">Pick a branch to merge and review what will change.</p></div></div>
+{{if not .Repo.CanWrite}}
+<div class="card"><div class="blank compact"><div class="blank-art accent" aria-hidden="true">{{template "icon" "push"}}</div>
+  <h2 class="blank-title">Propose a change by pushing</h2>
+  <p class="blank-text">Only the owner opens merge requests from branches here. Anyone with a token can open one by pushing, no fork needed.</p>
+  {{template "codebox" (dict "ID" "new-agit" "Code" (printf "git push origin HEAD:refs/for/%s -o title=\"Short title\" -o description=\"Why\"" .Repo.Default))}}</div></div>
+{{else if not .Data.Branches}}
+<div class="card">{{template "blank" (dict "Icon" "branch" "Title" "No branches yet" "Text" "Push a branch first, then come back to open a merge request from it." "Class" "compact")}}</div>
+{{else}}
+<form method="get" action="/{{.Repo.Path}}/-/merge_requests/new" class="card"><div class="card-body">
+  <div class="compare-refs">
+    <div><label for="source">Source branch</label><select id="source" name="source">{{range .Data.Branches}}<option value="{{.Name}}"{{if eq .Name $.Data.Source}} selected{{end}}>{{.Name}}</option>{{end}}</select></div>
+    <span class="arrow" aria-hidden="true">{{template "icon" "arrow-right"}}</span>
+    <div><label for="target">Target branch</label><select id="target" name="target">{{range .Data.Branches}}<option value="{{.Name}}"{{if eq .Name $.Data.Target}} selected{{end}}>{{.Name}}</option>{{end}}</select></div>
+  </div>
+  <div class="form-actions"><button class="btn" type="submit">{{template "icon" "compare"}}Compare</button><p class="hint">Shows the commits and changes before you create anything.</p></div>
+</div></form>
+
+{{if .Data.Compared}}
+{{if or .Data.Commits .Data.Diffs}}
+<form method="post" action="/{{.Repo.Path}}/-/merge_requests/new" class="card"><div class="card-body">
+  <input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="source" value="{{.Data.Source}}"><input type="hidden" name="target" value="{{.Data.Target}}">
+  <div class="field"><label for="title">Title</label><input type="text" id="title" name="title" maxlength="255" placeholder="Defaults to the latest commit's subject" value="{{.Data.Title}}"></div>
+  <div class="field"><label for="description">Description <span class="optional">(optional)</span></label><textarea id="description" name="description" placeholder="What changes and why. Markdown is supported.">{{.Data.Description}}</textarea></div>
+  <div class="form-actions"><button class="btn primary" type="submit">{{template "icon" "mr"}}Create merge request</button><a class="btn ghost" href="/{{.Repo.Path}}/-/merge_requests">Cancel</a>
+    <p class="hint"><span class="ref">{{.Data.Source}}</span> into <span class="ref">{{.Data.Target}}</span></p></div>
+</div></form>
+<div class="section-head"><h2 class="section-title">{{.Data.CommitCount}} commit{{if ne .Data.CommitCount 1}}s{{end}}</h2>{{if gt .Data.CommitCount (len .Data.Commits)}}<div class="section-actions"><span class="muted small">Showing the newest {{len .Data.Commits}}</span></div>{{end}}</div>
+<ul class="list card dense">{{range .Data.Commits}}<li>{{template "avatar" (dict "Name" .AuthorName "Size" "sm")}}<div class="grow"><a class="title" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{.Subject}}</a></div><div class="end"><span class="hide-sm">{{.AuthorName}}</span><a class="sha" href="/{{$.Repo.Path}}/-/commit/{{.OID}}">{{short .OID}}</a></div></li>{{else}}<li class="list-empty">No new commits. Only file changes differ.</li>{{end}}</ul>
+<div class="section-head"><h2 class="section-title">Changes</h2></div>
+{{template "diffview" (dict "Diffs" .Data.Diffs "RepoPath" .Repo.Path "Rev" .Data.Source)}}
+{{if .Data.DiffsTruncated}}<p class="footer-note">{{template "icon" "info"}}Showing the first 300 changed files. The merge request itself includes every file.</p>{{end}}
+{{else}}
+<div class="card">{{template "blank" (dict "Icon" "merge" "Title" "Nothing to merge" "Text" (printf "%s has no changes that %s does not already contain. Pick a different source branch to continue." .Data.Source .Data.Target) "Class" "compact")}}</div>
+{{end}}
+{{else}}
+{{/* POST error or no preview: keep the one-step form so the request can still be created */}}
+<form method="post" action="/{{.Repo.Path}}/-/merge_requests/new" class="card"><div class="card-body">
+  <input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="source" value="{{.Data.Source}}"><input type="hidden" name="target" value="{{.Data.Target}}">
+  {{if .Data.Source}}<p class="muted mt-0">Merge <span class="ref">{{.Data.Source}}</span> into <span class="ref">{{.Data.Target}}</span>.</p>{{end}}
+  <div class="field"><label for="title">Title</label><input type="text" id="title" name="title" maxlength="255" placeholder="Defaults to the latest commit's subject" value="{{.Data.Title}}"{{if not .Data.Source}} disabled{{end}}></div>
+  <div class="field"><label for="description">Description <span class="optional">(optional)</span></label><textarea id="description" name="description" placeholder="What changes and why. Markdown is supported."{{if not .Data.Source}} disabled{{end}}>{{.Data.Description}}</textarea></div>
+  <div class="form-actions"><button class="btn primary" type="submit"{{if not .Data.Source}} disabled{{end}}>{{template "icon" "mr"}}Create merge request</button><a class="btn ghost" href="/{{.Repo.Path}}/-/merge_requests">Cancel</a>
+    {{if not .Data.Source}}<p class="hint">Choose a source branch above and compare it to continue.</p>{{end}}</div>
+</div></form>
+{{end}}
+{{end}}
+{{end}}

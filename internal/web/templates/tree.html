@@ -1,0 +1,16 @@
+{{define "crumbs"}}<li><a href="/{{.Repo.Path}}/-/tree/{{.Repo.Ref}}" class="mono">{{.Repo.Ref}}</a></li>{{$n := len (crumbs .Data.Tree.Path)}}{{range $i, $c := crumbs .Data.Tree.Path}}<li{{if eq (add $i 1) $n}} aria-current="page"{{end}}>{{if eq (add $i 1) $n}}<span class="mono">{{$c.Name}}</span>{{else}}<a class="mono" href="/{{$.Repo.Path}}/-/tree/{{$.Repo.Ref}}/{{$c.Path}}">{{$c.Name}}</a>{{end}}</li>{{end}}{{end}}
+{{define "content"}}
+{{if eq .Repo.RefKind "commit"}}<div class="alert info compact">{{template "icon" "commit"}}<div class="alert-body">You are viewing the files at commit <span class="sha">{{short .Repo.Ref}}</span>. <a href="/{{.Repo.Path}}/-/tree/{{.Repo.Default}}">Go to {{.Repo.Default}}</a></div></div>{{end}}
+<div class="toolbar">
+  {{template "refswitch" .}}
+  <span class="mono strong truncate">{{if .Data.Tree.Path}}{{.Data.Tree.Path}}{{else}}{{.Repo.Name}}{{end}}</span>
+  <span class="spacer"></span>
+  <a class="btn sm" href="/{{.Repo.Path}}/-/commits/{{.Repo.Ref}}{{with .Data.Tree.Path}}/{{.}}{{end}}">{{template "icon" "history"}}History</a>
+</div>
+{{template "filetable" (dict "Tree" .Data.Tree "RepoPath" .Repo.Path "Ref" .Repo.Ref "Parent" .Data.Parent)}}
+{{with .Data.Tree.Readme}}<div class="card mt-6">
+  <div class="card-header">{{template "icon" "book"}}<span class="card-title">{{$.Data.Tree.Readme}}</span></div>
+  {{if eq (printf "%T" $.Data.Tree.ReadmeHTML) "string"}}<pre class="readme-plain">{{$.Data.Tree.ReadmeHTML}}</pre>
+  {{else}}<div class="card-body"><div class="markdown">{{$.Data.Tree.ReadmeHTML}}</div></div>{{end}}
+</div>{{end}}
+{{end}}

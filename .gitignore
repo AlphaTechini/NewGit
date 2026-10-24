@@ -1,0 +1,6 @@
+/data/
+/newgit
+/bin/
+*.test
+node_modules/
+screenshots/
